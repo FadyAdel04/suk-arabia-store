@@ -33,7 +33,7 @@ const Shop = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('newest');
   const [priceRange, setPriceRange] = useState('all');
   const { addToCart } = useCart();
@@ -66,7 +66,7 @@ const Shop = () => {
       .eq('is_active', true);
 
     // Apply filters
-    if (selectedCategory) {
+    if (selectedCategory && selectedCategory !== 'all') {
       query = query.eq('category_id', selectedCategory);
     }
 
@@ -142,7 +142,7 @@ const Shop = () => {
                 <SelectValue placeholder="جميع الفئات" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">جميع الفئات</SelectItem>
+                <SelectItem value="all">جميع الفئات</SelectItem>
                 {categories.map((category) => (
                   <SelectItem key={category.id} value={category.id}>
                     {category.name_ar}
@@ -184,7 +184,7 @@ const Shop = () => {
               variant="outline"
               onClick={() => {
                 setSearchTerm('');
-                setSelectedCategory('');
+                setSelectedCategory('all');
                 setSortBy('newest');
                 setPriceRange('all');
               }}

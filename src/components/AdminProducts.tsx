@@ -231,11 +231,12 @@ const AdminProducts = () => {
 
               <div>
                 <Label htmlFor="category_id">الفئة</Label>
-                <Select name="category_id" defaultValue={editingProduct?.category_id || ''}>
+                <Select name="category_id" defaultValue={editingProduct?.category_id || 'none'}>
                   <SelectTrigger>
                     <SelectValue placeholder="اختر الفئة" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="none" disabled>اختر الفئة</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
                         {category.name_ar}
