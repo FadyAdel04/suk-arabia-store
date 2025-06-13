@@ -16,15 +16,16 @@ interface Order {
   phone: string;
   notes: string;
   created_at: string;
+  user_id: string;
   profiles: {
     full_name: string;
-  };
+  } | null;
   order_items: {
     quantity: number;
     price: number;
     product: {
       name_ar: string;
-    };
+    } | null;
   }[];
 }
 
@@ -37,30 +38,59 @@ const AdminOrders = () => {
   }, []);
 
   const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        total_amount,
-        status,
-        payment_method,
-        shipping_address,
-        phone,
-        notes,
-        created_at,
-        profiles(full_name),
-        order_items(
-          quantity,
-          price,
-          product:products(name_ar)
-        )
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      const { data: ordersData, error } = await supabase
+        .from('orders')
+        .select(`
+          id,
+          total_amount,
+          status,
+          payment_method,
+          shipping_address,
+          phone,
+          notes,
+          created_at,
+          user_id
+        `)
+        .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching orders:', error);
-    } else {
-      setOrders(data || []);
+      if (error) {
+        console.error('Error fetching orders:', error);
+        setOrders([]);
+      } else if (ordersData) {
+        // Fetch profiles and order items separately
+        const ordersWithDetails = await Promise.all(
+          ordersData.map(async (order) => {
+            // Fetch profile
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name')
+              .eq('id', order.user_id)
+              .single();
+
+            // Fetch order items with products
+            const { data: orderItems } = await supabase
+              .from('order_items')
+              .select(`
+                quantity,
+                price,
+                product:products(name_ar)
+              `)
+              .eq('order_id', order.id);
+
+            return {
+              ...order,
+              profiles: profile,
+              order_items: orderItems || []
+            };
+          })
+        );
+
+        setOrders(ordersWithDetails);
+      }
+    } catch (error) {
+      console.error('Error in fetchOrders:', error);
+      setOrders([]);
     }
     setLoading(false);
   };
@@ -125,7 +155,7 @@ const AdminOrders = () => {
                   </Badge>
                 </div>
                 <p className="text-sm text-gray-600">
-                  العميل: {order.profiles?.full_name} | التاريخ: {new Date(order.created_at).toLocaleDateString('ar-EG')}
+                  العميل: {order.profiles?.full_name || 'غير محدد'} | التاريخ: {new Date(order.created_at).toLocaleDateString('ar-EG')}
                 </p>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -163,7 +193,7 @@ const AdminOrders = () => {
                   <div className="space-y-2">
                     {order.order_items.map((item, index) => (
                       <div key={index} className="flex justify-between">
-                        <span>{item.product.name_ar} × {item.quantity}</span>
+                        <span>{item.product?.name_ar || 'منتج محذوف'} × {item.quantity}</span>
                         <span>{(item.price * item.quantity).toLocaleString()} جنيه</span>
                       </div>
                     ))}
