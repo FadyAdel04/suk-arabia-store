@@ -10,6 +10,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import Index from "./pages/Index";
 import Shop from "./pages/Shop";
+import ProductDetails from "./pages/ProductDetails";
 import Auth from "./pages/Auth";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
@@ -17,6 +18,7 @@ import Orders from "./pages/Orders";
 import Admin from "./pages/Admin";
 import Contact from "./pages/Contact";
 import Offers from "./pages/Offers";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -35,6 +37,7 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/shop" element={<Shop />} />
+                  <Route path="/product/:id" element={<ProductDetails />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/cart" element={<Cart />} />
                   <Route path="/checkout" element={<Checkout />} />
@@ -42,6 +45,7 @@ const App = () => (
                   <Route path="/admin" element={<Admin />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/offers" element={<Offers />} />
+                  <Route path="/profile" element={<Profile />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </main>

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import ImageUpload from './ImageUpload';
 
 interface Product {
   id: string;
@@ -38,6 +39,7 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [productImageUrl, setProductImageUrl] = useState('');
 
   useEffect(() => {
     fetchProducts();
@@ -82,7 +84,7 @@ const AdminProducts = () => {
       price: parseFloat(formData.get('price') as string),
       original_price: parseFloat(formData.get('original_price') as string) || null,
       category_id: formData.get('category_id') as string,
-      image_url: formData.get('image_url') as string,
+      image_url: productImageUrl || editingProduct?.image_url || '',
       stock_quantity: parseInt(formData.get('stock_quantity') as string),
       is_featured: formData.get('is_featured') === 'true',
       is_active: formData.get('is_active') === 'true'
@@ -101,6 +103,7 @@ const AdminProducts = () => {
         fetchProducts();
         setIsDialogOpen(false);
         setEditingProduct(null);
+        setProductImageUrl('');
       }
     } else {
       const { error } = await supabase
@@ -113,6 +116,7 @@ const AdminProducts = () => {
         toast.success('تم إضافة المنتج بنجاح');
         fetchProducts();
         setIsDialogOpen(false);
+        setProductImageUrl('');
       }
     }
   };
@@ -133,6 +137,18 @@ const AdminProducts = () => {
     }
   };
 
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setProductImageUrl(product.image_url);
+    setIsDialogOpen(true);
+  };
+
+  const openAddDialog = () => {
+    setEditingProduct(null);
+    setProductImageUrl('');
+    setIsDialogOpen(true);
+  };
+
   if (loading) {
     return <div>جاري التحميل...</div>;
   }
@@ -143,7 +159,7 @@ const AdminProducts = () => {
         <h2 className="text-2xl font-bold">المنتجات</h2>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
-            <Button onClick={() => setEditingProduct(null)}>
+            <Button onClick={openAddDialog}>
               <Plus className="h-4 w-4 ml-2" />
               إضافة منتج جديد
             </Button>
@@ -155,6 +171,11 @@ const AdminProducts = () => {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <ImageUpload
+                onImageUploaded={setProductImageUrl}
+                currentImage={productImageUrl}
+              />
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">الاسم (English)</Label>
@@ -246,15 +267,6 @@ const AdminProducts = () => {
                 </Select>
               </div>
 
-              <div>
-                <Label htmlFor="image_url">رابط الصورة</Label>
-                <Input
-                  id="image_url"
-                  name="image_url"
-                  defaultValue={editingProduct?.image_url || ''}
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="is_featured">منتج مميز</Label>
@@ -311,10 +323,7 @@ const AdminProducts = () => {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => {
-                    setEditingProduct(product);
-                    setIsDialogOpen(true);
-                  }}
+                  onClick={() => openEditDialog(product)}
                 >
                   <Edit className="h-4 w-4" />
                 </Button>
