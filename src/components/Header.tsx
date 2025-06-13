@@ -1,132 +1,101 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ShoppingCart, User, Menu, X } from 'lucide-react';
-import { Button } from './ui/button';
-import { Input } from './ui/input';
+import { useAuth } from '@/hooks/useAuth';
+import { useCart } from '@/hooks/useCart';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ShoppingCart, User, LogOut, Settings } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 const Header = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const navigation = [
-    { name: 'الرئيسية', href: '/' },
-    { name: 'المتجر', href: '/shop' },
-    { name: 'العروض', href: '/offers' },
-    { name: 'تواصل معنا', href: '/contact' },
-  ];
+  const { user, signOut } = useAuth();
+  const { totalItems } = useCart();
 
   return (
-    <header className="bg-white shadow-lg sticky top-0 z-50">
+    <header className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4">
-        {/* Top Bar */}
-        <div className="flex items-center justify-between h-16 border-b border-gray-200">
-          <div className="flex items-center space-x-4 space-x-reverse">
-            <span className="text-sm text-gray-600">مرحباً بكم في متجرنا الإلكتروني</span>
-          </div>
-          <div className="flex items-center space-x-4 space-x-reverse">
-            <Link to="/login" className="text-sm text-gray-600 hover:text-primary">
-              تسجيل الدخول
-            </Link>
-            <span className="text-gray-300">|</span>
-            <Link to="/register" className="text-sm text-gray-600 hover:text-primary">
-              إنشاء حساب
-            </Link>
-          </div>
-        </div>
-
-        {/* Main Header */}
-        <div className="flex items-center justify-between h-20">
+        <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center">
-            <div className="bg-primary text-white px-4 py-2 rounded-lg font-bold text-xl">
-              متجري
+          <Link to="/" className="flex items-center space-x-2 space-x-reverse">
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">م</span>
             </div>
+            <span className="text-xl font-bold text-gray-900">متجري</span>
           </Link>
 
-          {/* Desktop Navigation */}
+          {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8 space-x-reverse">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className="text-gray-700 hover:text-primary font-medium transition-colors duration-200 story-link"
-              >
-                {item.name}
-              </Link>
-            ))}
+            <Link to="/" className="text-gray-700 hover:text-blue-600 transition-colors">
+              الرئيسية
+            </Link>
+            <Link to="/shop" className="text-gray-700 hover:text-blue-600 transition-colors">
+              المتجر
+            </Link>
+            <Link to="/offers" className="text-gray-700 hover:text-blue-600 transition-colors">
+              العروض
+            </Link>
+            <Link to="/contact" className="text-gray-700 hover:text-blue-600 transition-colors">
+              اتصل بنا
+            </Link>
           </nav>
-
-          {/* Search Bar */}
-          <div className="hidden lg:flex items-center flex-1 max-w-md mx-8">
-            <div className="relative w-full">
-              <Input
-                type="text"
-                placeholder="ابحث عن المنتجات..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-2 w-full"
-              />
-              <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            </div>
-          </div>
 
           {/* Actions */}
           <div className="flex items-center space-x-4 space-x-reverse">
-            <Button variant="ghost" size="sm" className="relative">
-              <User className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="sm" className="relative">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                3
-              </span>
-            </Button>
-            
-            {/* Mobile Menu Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-            </Button>
-          </div>
-        </div>
+            {/* Cart */}
+            <Link to="/cart" className="relative">
+              <Button variant="ghost" size="sm">
+                <ShoppingCart className="h-5 w-5" />
+                {totalItems > 0 && (
+                  <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs">
+                    {totalItems}
+                  </Badge>
+                )}
+              </Button>
+            </Link>
 
-        {/* Mobile Search */}
-        <div className="lg:hidden py-4 border-t border-gray-200">
-          <div className="relative">
-            <Input
-              type="text"
-              placeholder="ابحث عن المنتجات..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 pr-4 py-2 w-full"
-            />
-            <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            {/* User Menu */}
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm">
+                    <User className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem asChild>
+                    <Link to="/orders" className="flex items-center">
+                      <ShoppingCart className="h-4 w-4 ml-2" />
+                      طلباتي
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link to="/admin" className="flex items-center">
+                      <Settings className="h-4 w-4 ml-2" />
+                      لوحة الإدارة
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={signOut} className="flex items-center text-red-600">
+                    <LogOut className="h-4 w-4 ml-2" />
+                    تسجيل الخروج
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/auth">
+                <Button size="sm">تسجيل الدخول</Button>
+              </Link>
+            )}
           </div>
         </div>
       </div>
-
-      {/* Mobile Navigation */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-gray-200 animate-fade-in">
-          <nav className="px-4 py-4 space-y-4">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                to={item.href}
-                className="block text-gray-700 hover:text-primary font-medium py-2"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
     </header>
   );
 };

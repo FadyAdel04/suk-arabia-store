@@ -1,190 +1,135 @@
 
-import React from 'react';
-import { Star, ShoppingCart, Heart, Eye } from 'lucide-react';
-import { Button } from './ui/button';
-import { Card, CardContent, CardFooter } from './ui/card';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useCart } from '@/hooks/useCart';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ShoppingCart, Star } from 'lucide-react';
+
+interface Product {
+  id: string;
+  name_ar: string;
+  description_ar: string;
+  price: number;
+  original_price: number;
+  image_url: string;
+  stock_quantity: number;
+}
 
 const FeaturedProducts = () => {
-  const products = [
-    {
-      id: 1,
-      name: 'لابتوب ديل XPS 13',
-      price: 4999,
-      originalPrice: 5999,
-      image: 'https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&w=400&q=80',
-      rating: 4.5,
-      category: 'إلكترونيات',
-      isNew: true,
-      discount: 17
-    },
-    {
-      id: 2,
-      name: 'ساعة ذكية آبل واتش',
-      price: 1299,
-      originalPrice: 1599,
-      image: 'https://images.unsplash.com/photo-1434494878577-86c23bcb06b9?auto=format&fit=crop&w=400&q=80',
-      rating: 4.8,
-      category: 'إكسسوارات',
-      isNew: false,
-      discount: 19
-    },
-    {
-      id: 3,
-      name: 'سماعات بوز اللاسلكية',
-      price: 899,
-      originalPrice: 1099,
-      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=400&q=80',
-      rating: 4.6,
-      category: 'صوتيات',
-      isNew: false,
-      discount: 18
-    },
-    {
-      id: 4,
-      name: 'كاميرا كانون EOS R5',
-      price: 12999,
-      originalPrice: 14999,
-      image: 'https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?auto=format&fit=crop&w=400&q=80',
-      rating: 4.9,
-      category: 'تصوير',
-      isNew: true,
-      discount: 13
-    },
-    {
-      id: 5,
-      name: 'هاتف سامسونج جالاكسي S24',
-      price: 3499,
-      originalPrice: 3999,
-      image: 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=400&q=80',
-      rating: 4.7,
-      category: 'هواتف',
-      isNew: false,
-      discount: 13
-    },
-    {
-      id: 6,
-      name: 'تابلت آيباد برو',
-      price: 4199,
-      originalPrice: 4799,
-      image: 'https://images.unsplash.com/photo-1561154464-82e9adf32764?auto=format&fit=crop&w=400&q=80',
-      rating: 4.8,
-      category: 'تابلت',
-      isNew: true,
-      discount: 13
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
+
+  useEffect(() => {
+    fetchFeaturedProducts();
+  }, []);
+
+  const fetchFeaturedProducts = async () => {
+    const { data, error } = await supabase
+      .from('products')
+      .select('*')
+      .eq('is_featured', true)
+      .eq('is_active', true)
+      .limit(8);
+
+    if (error) {
+      console.error('Error fetching featured products:', error);
+    } else {
+      setProducts(data || []);
     }
-  ];
-
-  const formatPrice = (price: number) => {
-    return price.toLocaleString('ar-SA') + ' ريال';
+    setLoading(false);
   };
 
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, index) => (
-      <Star
-        key={index}
-        className={`h-4 w-4 ${
-          index < Math.floor(rating)
-            ? 'text-yellow-400 fill-current'
-            : index < rating
-            ? 'text-yellow-400 fill-current opacity-50'
-            : 'text-gray-300'
-        }`}
-      />
-    ));
-  };
+  if (loading) {
+    return (
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4 text-center">
+          <div className="text-gray-600">جاري تحميل المنتجات المميزة...</div>
+        </div>
+      </section>
+    );
+  }
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-16 bg-white">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
           <h2 className="text-3xl lg:text-4xl font-bold text-gray-900 mb-4">
             المنتجات المميزة
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            اكتشف أحدث المنتجات والعروض الحصرية المختارة خصيصاً لك
+          <p className="text-xl text-gray-600">
+            اكتشف مجموعة منتقاة من أفضل منتجاتنا
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {products.map((product, index) => (
-            <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 animate-fade-in" style={{animationDelay: `${index * 100}ms`}}>
-              <CardContent className="p-0">
-                <div className="relative overflow-hidden">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  
-                  {/* Badges */}
-                  <div className="absolute top-3 right-3 flex flex-col gap-2">
-                    {product.isNew && (
-                      <span className="bg-green-500 text-white px-2 py-1 text-xs font-bold rounded">
-                        جديد
-                      </span>
-                    )}
-                    {product.discount > 0 && (
-                      <span className="bg-red-500 text-white px-2 py-1 text-xs font-bold rounded">
-                        -{product.discount}%
-                      </span>
-                    )}
-                  </div>
+            <Card
+              key={product.id}
+              className="group hover:shadow-xl transition-all duration-300 animate-fade-in hover-scale overflow-hidden"
+              style={{animationDelay: `${index * 100}ms`}}
+            >
+              <div className="relative">
+                <img
+                  src={product.image_url || "/placeholder.svg"}
+                  alt={product.name_ar}
+                  className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
+                />
+                <Badge className="absolute top-2 left-2 bg-yellow-500 text-white">
+                  <Star className="h-3 w-3 ml-1" />
+                  مميز
+                </Badge>
+                {product.original_price && (
+                  <Badge className="absolute top-2 right-2 bg-red-500 text-white">
+                    خصم {Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
+                  </Badge>
+                )}
+              </div>
 
-                  {/* Quick Actions */}
-                  <div className="absolute top-3 left-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                    <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
-                      <Heart className="h-4 w-4" />
-                    </Button>
-                    <Button size="sm" variant="secondary" className="h-8 w-8 p-0">
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+              <CardContent className="p-4">
+                <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2">
+                  {product.name_ar}
+                </h3>
+                
+                <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                  {product.description_ar}
+                </p>
 
-                <div className="p-4">
-                  <div className="text-sm text-primary font-medium mb-1">
-                    {product.category}
-                  </div>
-                  <h3 className="font-bold text-lg mb-2 line-clamp-2">
-                    {product.name}
-                  </h3>
-                  
-                  {/* Rating */}
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="flex">
-                      {renderStars(product.rating)}
-                    </div>
-                    <span className="text-sm text-gray-600">({product.rating})</span>
-                  </div>
-
-                  {/* Price */}
-                  <div className="flex items-center gap-2 mb-4">
-                    <span className="text-xl font-bold text-primary">
-                      {formatPrice(product.price)}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex flex-col">
+                    <span className="text-xl font-bold text-blue-600">
+                      {product.price.toLocaleString()} جنيه
                     </span>
-                    {product.originalPrice > product.price && (
+                    {product.original_price && (
                       <span className="text-sm text-gray-500 line-through">
-                        {formatPrice(product.originalPrice)}
+                        {product.original_price.toLocaleString()} جنيه
                       </span>
                     )}
                   </div>
+                  <div className="text-sm text-gray-600">
+                    متوفر: {product.stock_quantity}
+                  </div>
                 </div>
-              </CardContent>
 
-              <CardFooter className="p-4 pt-0">
-                <Button className="w-full bg-primary hover:bg-primary-700">
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  أضف للسلة
+                <Button
+                  onClick={() => addToCart(product.id)}
+                  className="w-full"
+                  disabled={product.stock_quantity === 0}
+                >
+                  {product.stock_quantity === 0 ? (
+                    'نفدت الكمية'
+                  ) : (
+                    <>
+                      <ShoppingCart className="h-4 w-4 ml-2" />
+                      أضف للسلة
+                    </>
+                  )}
                 </Button>
-              </CardFooter>
+              </CardContent>
             </Card>
           ))}
-        </div>
-
-        <div className="text-center mt-12">
-          <Button variant="outline" size="lg" className="px-8">
-            عرض جميع المنتجات
-          </Button>
         </div>
       </div>
     </section>
