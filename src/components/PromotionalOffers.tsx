@@ -1,22 +1,16 @@
-
 import React from 'react';
 import { Button } from './ui/button';
 import { Clock, Gift, Zap, Percent, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-
 const PromotionalOffers = () => {
-  return (
-    <section className="py-16 bg-white">
+  return <section className="py-16 bg-white">
       {/* OFFERS BANNER */}
-      <div
-        className="relative rounded-2xl overflow-hidden mb-12 animate-fade-in"
-        style={{
-          backgroundImage:
-            'url("https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80")', // Electronics circuit board macro photo
-          backgroundPosition: 'center',
-          backgroundSize: 'cover',
-        }}
-      >
+      <div className="relative rounded-2xl overflow-hidden mb-12 animate-fade-in" style={{
+      backgroundImage: 'url("https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1200&q=80")',
+      // Electronics circuit board macro photo
+      backgroundPosition: 'center',
+      backgroundSize: 'cover'
+    }}>
         {/* Overlay */}
         <div className="absolute inset-0 bg-gradient-to-l from-blue-900/70 to-blue-600/60" />
         {/* Banner Content */}
@@ -43,13 +37,8 @@ const PromotionalOffers = () => {
             </Link>
           </div>
           <div className="hidden md:block flex-1 text-center">
-            <img
-              src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=400&q=80" // Person using MacBook Pro
-              alt="صورة عرض الكترونيات"
-              className="rounded-xl object-cover w-full max-w-xs shadow-xl ring-4 ring-white/30 animate-scale-in"
-              loading="lazy"
-              draggable={false}
-            />
+            <img src="https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?auto=format&fit=crop&w=400&q=80" // Person using MacBook Pro
+          alt="صورة عرض الكترونيات" className="rounded-xl object-cover w-full max-w-xs shadow-xl ring-4 ring-white/30 animate-scale-in" loading="lazy" draggable={false} />
           </div>
         </div>
       </div>
@@ -73,7 +62,9 @@ const PromotionalOffers = () => {
               {/* Floating Decorative Icons */}
               <Percent className="absolute top-8 left-8 opacity-40 w-14 h-14 text-yellow-300 -z-0 animate-pulse" />
               <Gift className="absolute bottom-12 right-10 opacity-25 w-20 h-20 text-pink-300 -z-0 animate-bounce" />
-              <Zap className="absolute top-1/2 left-1/3 opacity-20 w-16 h-16 text-teal-200 -z-0 animate-spin" style={{ animationDuration: '7s'}} />
+              <Zap className="absolute top-1/2 left-1/3 opacity-20 w-16 h-16 text-teal-200 -z-0 animate-spin" style={{
+              animationDuration: '7s'
+            }} />
               {/* Offer Content */}
               <div className="relative z-10">
                 <div className="flex items-center gap-2 mb-5">
@@ -136,9 +127,7 @@ const PromotionalOffers = () => {
             <div className="bg-green-100 rounded-xl p-6 text-center">
               <Gift className="h-12 w-12 text-green-600 mx-auto mb-4" />
               <h4 className="font-bold text-lg mb-2">شحن مجاني</h4>
-              <p className="text-gray-600 mb-4">
-                شحن مجاني لجميع الطلبات أكثر من 200 ريال
-              </p>
+              <p className="text-gray-600 mb-4">شحن مجاني لجميع الطلبات أكثر من 200 جنيه</p>
               <Button variant="outline" className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white">
                 اطلب الآن
               </Button>
@@ -157,7 +146,6 @@ const PromotionalOffers = () => {
           </div>
         </div>
       </div>
-    </section>
-  );
+    </section>;
 };
 export default PromotionalOffers;
