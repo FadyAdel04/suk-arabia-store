@@ -19,7 +19,7 @@ interface Product {
   description: string;
   description_ar: string;
   price: number;
-  original_price: number;
+  original_price: number | null;
   category_id: string;
   image_url: string;
   stock_quantity: number;
@@ -40,6 +40,7 @@ const AdminProducts = () => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [productImageUrl, setProductImageUrl] = useState('');
+  const [activeEdit, setActiveEdit] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -75,7 +76,7 @@ const AdminProducts = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+
     const productData = {
       name: formData.get('name') as string,
       name_ar: formData.get('name_ar') as string,
@@ -140,13 +141,29 @@ const AdminProducts = () => {
   const openEditDialog = (product: Product) => {
     setEditingProduct(product);
     setProductImageUrl(product.image_url);
+    setActiveEdit(product.is_active);
     setIsDialogOpen(true);
   };
 
   const openAddDialog = () => {
     setEditingProduct(null);
     setProductImageUrl('');
+    setActiveEdit(true);
     setIsDialogOpen(true);
+  };
+
+  const handleToggleActive = async (id: string, val: boolean) => {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: val })
+      .eq('id', id);
+
+    if (!error) {
+      toast.success(`تم ${val ? 'إظهار' : 'إخفاء'} المنتج`);
+      fetchProducts();
+    } else {
+      toast.error('تعذر تحديث حالة المنتج');
+    }
   };
 
   if (loading) {
@@ -281,14 +298,18 @@ const AdminProducts = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="is_active">نشط</Label>
-                  <Select name="is_active" defaultValue={editingProduct?.is_active ? 'true' : 'false'}>
+                  <Label htmlFor="is_active">عرض المنتج</Label>
+                  <Select
+                    name="is_active"
+                    defaultValue={editingProduct?.is_active ? 'true' : 'false'}
+                    onValueChange={(val) => setActiveEdit(val === 'true')}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="true">نعم</SelectItem>
-                      <SelectItem value="false">لا</SelectItem>
+                      <SelectItem value="true">ظاهر في الموقع</SelectItem>
+                      <SelectItem value="false">مخفي</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -305,12 +326,24 @@ const AdminProducts = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => (
           <Card key={product.id}>
-            <CardHeader>
-              <img
-                src={product.image_url || "/placeholder.svg"}
-                alt={product.name_ar}
-                className="w-full h-48 object-cover rounded-lg"
-              />
+            <CardHeader className="p-0">
+              <div className="relative">
+                <img
+                  src={product.image_url || "/placeholder.svg"}
+                  alt={product.name_ar}
+                  className="w-full h-52 object-cover rounded-lg"
+                  style={{ aspectRatio: '1/1' }}
+                />
+                <div className="absolute top-2 right-2">
+                  <Button
+                    variant={product.is_active ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => handleToggleActive(product.id, !product.is_active)}
+                  >
+                    {product.is_active ? 'إخفاء' : 'إظهار'}
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <CardTitle className="mb-2">{product.name_ar}</CardTitle>

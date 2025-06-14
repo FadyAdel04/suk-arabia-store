@@ -16,13 +16,20 @@ interface Product {
   name_ar: string;
   description_ar: string;
   price: number;
-  original_price: number;
-  image_url: string;
+  original_price: number | null;
+  image_url: string | null;
   stock_quantity: number;
   is_featured: boolean;
+  is_active: boolean;
   category: {
     name_ar: string;
   };
+}
+
+interface ProductImage {
+  id: string;
+  product_id: string;
+  image_url: string;
 }
 
 interface Review {
@@ -32,7 +39,7 @@ interface Review {
   created_at: string;
   profiles: {
     full_name: string;
-  };
+  } | null;
 }
 
 const ProductDetails = () => {
@@ -41,19 +48,24 @@ const ProductDetails = () => {
   const { user } = useAuth();
   const { addToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
+  const [productImages, setProductImages] = useState<ProductImage[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [galleryIndex, setGalleryIndex] = useState(0);
 
   useEffect(() => {
     if (id) {
       fetchProduct();
+      fetchProductImages();
       fetchReviews();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const fetchProduct = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('products')
       .select(`
@@ -62,31 +74,44 @@ const ProductDetails = () => {
       `)
       .eq('id', id)
       .eq('is_active', true)
-      .single();
+      .maybeSingle();
 
-    if (error) {
+    if (error || !data) {
       console.error('Error fetching product:', error);
       navigate('/shop');
     } else {
-      setProduct(data);
+      setProduct(data as Product);
     }
     setLoading(false);
   };
 
+  const fetchProductImages = async () => {
+    if (!id) return;
+    const { data, error } = await supabase
+      .from('product_images')
+      .select('*')
+      .eq('product_id', id)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      setProductImages([]);
+    } else {
+      setProductImages(data as ProductImage[]);
+    }
+  };
+
   const fetchReviews = async () => {
+    if (!id) return;
     const { data, error } = await supabase
       .from('product_reviews')
-      .select(`
-        *,
-        profiles(full_name)
-      `)
+      .select('id,rating,comment,created_at,profiles(full_name)')
       .eq('product_id', id)
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching reviews:', error);
+      setReviews([]);
     } else {
-      setReviews(data || []);
+      setReviews(data as Review[]);
     }
   };
 
@@ -95,22 +120,18 @@ const ProductDetails = () => {
       toast.error('يجب تسجيل الدخول لإضافة مراجعة');
       return;
     }
-
     if (!newReview.comment.trim()) {
       toast.error('يرجى كتابة تعليق');
       return;
     }
-
     setSubmittingReview(true);
 
-    const { error } = await supabase
-      .from('product_reviews')
-      .insert({
-        product_id: id,
-        user_id: user.id,
-        rating: newReview.rating,
-        comment: newReview.comment
-      });
+    const { error } = await supabase.from('product_reviews').insert({
+      product_id: id,
+      user_id: user.id,
+      rating: newReview.rating,
+      comment: newReview.comment
+    });
 
     if (error) {
       toast.error('خطأ في إضافة المراجعة');
@@ -119,7 +140,6 @@ const ProductDetails = () => {
       setNewReview({ rating: 5, comment: '' });
       fetchReviews();
     }
-
     setSubmittingReview(false);
   };
 
@@ -147,6 +167,12 @@ const ProductDetails = () => {
     );
   }
 
+  // Prepare main image gallery: combine main image and additional images
+  const gallery: string[] = [
+    ...(product.image_url ? [product.image_url] : []),
+    ...productImages.filter(img => img.image_url !== product.image_url).map(img => img.image_url)
+  ];
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
@@ -160,13 +186,40 @@ const ProductDetails = () => {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          {/* Product Image */}
-          <div className="relative">
-            <img
-              src={product.image_url || "/placeholder.svg"}
-              alt={product.name_ar}
-              className="w-full h-96 object-cover rounded-lg shadow-lg"
-            />
+          {/* Product Images Gallery */}
+          <div className="relative flex flex-col items-center">
+            {gallery.length > 0 ? (
+              <>
+                <img
+                  src={gallery[galleryIndex]}
+                  alt={product.name_ar}
+                  className="w-full max-w-lg h-96 object-cover rounded-lg shadow-lg transition"
+                  style={{ aspectRatio: '1/1', objectFit: 'cover' }}
+                />
+                {/* Thumbnails */}
+                {gallery.length > 1 && (
+                  <div className="flex gap-2 mt-4">
+                    {gallery.map((imgUrl, idx) => (
+                      <img
+                        key={idx}
+                        src={imgUrl}
+                        alt={`عرض ${idx + 1}`}
+                        className={`w-16 h-16 object-cover rounded-md cursor-pointer border ${galleryIndex === idx ? 'border-blue-500' : 'border-gray-200'}`}
+                        style={{ aspectRatio: '1/1' }}
+                        onClick={() => setGalleryIndex(idx)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <img
+                src="/placeholder.svg"
+                alt={product.name_ar}
+                className="w-full max-w-lg h-96 object-cover rounded-lg shadow-lg"
+                style={{ aspectRatio: '1/1' }}
+              />
+            )}
             {product.is_featured && (
               <Badge className="absolute top-4 left-4 bg-yellow-500 text-white">
                 <Star className="h-3 w-3 ml-1" />
