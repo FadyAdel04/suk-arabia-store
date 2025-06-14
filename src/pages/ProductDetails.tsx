@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { Star, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { Star, ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Product {
   id: string;
@@ -18,18 +17,13 @@ interface Product {
   price: number;
   original_price: number | null;
   image_url: string | null;
+  images: string[];
   stock_quantity: number;
   is_featured: boolean;
   is_active: boolean;
   category: {
     name_ar: string;
   };
-}
-
-interface ProductImage {
-  id: string;
-  product_id: string;
-  image_url: string;
 }
 
 interface Review {
@@ -48,17 +42,15 @@ const ProductDetails = () => {
   const { user } = useAuth();
   const { addToCart } = useCart();
   const [product, setProduct] = useState<Product | null>(null);
-  const [productImages, setProductImages] = useState<ProductImage[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
   const [submittingReview, setSubmittingReview] = useState(false);
-  const [galleryIndex, setGalleryIndex] = useState(0);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     if (id) {
       fetchProduct();
-      fetchProductImages();
       fetchReviews();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,21 +75,6 @@ const ProductDetails = () => {
       setProduct(data as Product);
     }
     setLoading(false);
-  };
-
-  const fetchProductImages = async () => {
-    if (!id) return;
-    const { data, error } = await supabase
-      .from('product_images')
-      .select('*')
-      .eq('product_id', id)
-      .order('created_at', { ascending: true });
-
-    if (error) {
-      setProductImages([]);
-    } else {
-      setProductImages(data as ProductImage[]);
-    }
   };
 
   const fetchReviews = async () => {
@@ -147,6 +124,18 @@ const ProductDetails = () => {
     ? reviews.reduce((sum, review) => sum + review.rating, 0) / reviews.length 
     : 0;
 
+  const nextImage = () => {
+    if (product?.images && product.images.length > 1) {
+      setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
+    }
+  };
+
+  const prevImage = () => {
+    if (product?.images && product.images.length > 1) {
+      setCurrentImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 py-8">
@@ -167,11 +156,12 @@ const ProductDetails = () => {
     );
   }
 
-  // Prepare main image gallery: combine main image and additional images
-  const gallery: string[] = [
-    ...(product.image_url ? [product.image_url] : []),
-    ...productImages.filter(img => img.image_url !== product.image_url).map(img => img.image_url)
-  ];
+  // Prepare image gallery from the images array
+  const imageGallery = product.images && product.images.length > 0 
+    ? product.images 
+    : product.image_url 
+      ? [product.image_url] 
+      : ['/placeholder.svg'];
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -187,49 +177,75 @@ const ProductDetails = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Product Images Gallery */}
-          <div className="relative flex flex-col items-center">
-            {gallery.length > 0 ? (
-              <>
-                <img
-                  src={gallery[galleryIndex]}
-                  alt={product.name_ar}
-                  className="w-full max-w-lg h-96 object-cover rounded-lg shadow-lg transition"
-                  style={{ aspectRatio: '1/1', objectFit: 'cover' }}
-                />
-                {/* Thumbnails */}
-                {gallery.length > 1 && (
-                  <div className="flex gap-2 mt-4">
-                    {gallery.map((imgUrl, idx) => (
-                      <img
-                        key={idx}
-                        src={imgUrl}
-                        alt={`عرض ${idx + 1}`}
-                        className={`w-16 h-16 object-cover rounded-md cursor-pointer border ${galleryIndex === idx ? 'border-blue-500' : 'border-gray-200'}`}
-                        style={{ aspectRatio: '1/1' }}
-                        onClick={() => setGalleryIndex(idx)}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
+          <div className="space-y-4">
+            {/* Main Image */}
+            <div className="relative">
               <img
-                src="/placeholder.svg"
+                src={imageGallery[currentImageIndex]}
                 alt={product.name_ar}
-                className="w-full max-w-lg h-96 object-cover rounded-lg shadow-lg"
-                style={{ aspectRatio: '1/1' }}
+                className="w-full h-96 object-cover rounded-lg shadow-lg"
               />
-            )}
-            {product.is_featured && (
-              <Badge className="absolute top-4 left-4 bg-yellow-500 text-white">
-                <Star className="h-3 w-3 ml-1" />
-                مميز
-              </Badge>
-            )}
-            {product.original_price && (
-              <Badge className="absolute top-4 right-4 bg-red-500 text-white">
-                خصم {Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
-              </Badge>
+              
+              {/* Navigation arrows for multiple images */}
+              {imageGallery.length > 1 && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                    onClick={prevImage}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white"
+                    onClick={nextImage}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </>
+              )}
+
+              {/* Image counter */}
+              {imageGallery.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                  {currentImageIndex + 1} / {imageGallery.length}
+                </div>
+              )}
+
+              {/* Badges */}
+              {product.is_featured && (
+                <Badge className="absolute top-4 left-4 bg-yellow-500 text-white">
+                  <Star className="h-3 w-3 ml-1" />
+                  مميز
+                </Badge>
+              )}
+              {product.original_price && (
+                <Badge className="absolute top-4 right-4 bg-red-500 text-white">
+                  خصم {Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
+                </Badge>
+              )}
+            </div>
+
+            {/* Thumbnail Images */}
+            {imageGallery.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto">
+                {imageGallery.map((img, index) => (
+                  <img
+                    key={index}
+                    src={img}
+                    alt={`صورة ${index + 1}`}
+                    className={`w-20 h-20 object-cover rounded-md cursor-pointer border-2 transition-all ${
+                      currentImageIndex === index 
+                        ? 'border-blue-500' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    onClick={() => setCurrentImageIndex(index)}
+                  />
+                ))}
+              </div>
             )}
           </div>
 

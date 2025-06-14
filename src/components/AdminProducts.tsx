@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2 } from 'lucide-react';
+import { Plus, Edit, Trash2, Image } from 'lucide-react';
 import ImageUpload from './ImageUpload';
 import ProductImageGallery from './ProductImageGallery';
 
@@ -40,10 +40,8 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [productImageUrl, setProductImageUrl] = useState('');
-  const [activeEdit, setActiveEdit] = useState<boolean | null>(null);
-
   const [productImages, setProductImages] = useState<string[]>([]);
+  const [activeEdit, setActiveEdit] = useState<boolean | null>(null);
 
   useEffect(() => {
     fetchProducts();
@@ -237,13 +235,44 @@ const AdminProducts = () => {
                 : "املأ التفاصيل لإضافة منتج جديد إلى المتجر."}
             </DialogDescription>
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* --- Use Multiple Image Upload --- */}
-              <ImageUpload
-                onImageUploaded={setProductImages}
-                currentImage={productImages}
-              />
-              
-              
+              {/* Product Images Section */}
+              <div className="space-y-2">
+                <Label className="text-base font-medium flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  صور المنتج
+                </Label>
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <p className="text-sm text-gray-600">
+                    الصورة الأولى ستكون الصورة الرئيسية للمنتج. يمكنك إضافة المزيد من الصور التفصيلية.
+                  </p>
+                  <ImageUpload
+                    onImageUploaded={setProductImages}
+                    currentImage={productImages}
+                  />
+                  {productImages.length > 0 && (
+                    <div className="mt-3">
+                      <Label className="text-sm text-gray-600">معاينة الصور:</Label>
+                      <div className="grid grid-cols-4 gap-2 mt-2">
+                        {productImages.map((img, index) => (
+                          <div key={index} className="relative">
+                            <img 
+                              src={img} 
+                              alt={`صورة ${index + 1}`} 
+                              className="w-full h-20 object-cover rounded border"
+                            />
+                            {index === 0 && (
+                              <div className="absolute top-0 left-0 bg-blue-500 text-white text-xs px-1 rounded-br">
+                                رئيسية
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">الاسم (English)</Label>
@@ -380,9 +409,26 @@ const AdminProducts = () => {
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => (
-          <Card key={product.id}>
+          <Card key={product.id} className="relative">
             <CardHeader className="p-0">
-              <ProductImageGallery images={product.images && product.images.length > 0 ? product.images : (product.image_url ? [product.image_url] : [])} alt={product.name_ar} />
+              <div className="relative">
+                {product.images && product.images.length > 0 ? (
+                  <img
+                    src={product.images[0]}
+                    alt={product.name_ar}
+                    className="w-full h-48 object-cover rounded-t-lg"
+                  />
+                ) : (
+                  <div className="w-full h-48 bg-gray-200 rounded-t-lg flex items-center justify-center">
+                    <Image className="h-8 w-8 text-gray-400" />
+                  </div>
+                )}
+                {product.images && product.images.length > 1 && (
+                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
+                    +{product.images.length - 1} صور
+                  </div>
+                )}
+              </div>
               <div className="absolute top-2 right-2">
                 <Button
                   variant={product.is_active ? 'default' : 'outline'}
@@ -395,7 +441,7 @@ const AdminProducts = () => {
             </CardHeader>
             <CardContent>
               <CardTitle className="mb-2">{product.name_ar}</CardTitle>
-              <p className="text-sm text-gray-600 mb-2">{product.description_ar}</p>
+              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description_ar}</p>
               <div className="flex justify-between items-center mb-4">
                 <span className="font-bold text-lg">{product.price.toLocaleString()} جنيه</span>
                 <span className="text-sm text-gray-500">المخزون: {product.stock_quantity}</span>
