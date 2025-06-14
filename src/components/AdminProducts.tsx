@@ -43,7 +43,6 @@ const AdminProducts = () => {
   const [productImageUrl, setProductImageUrl] = useState('');
   const [activeEdit, setActiveEdit] = useState<boolean | null>(null);
 
-  // NEW: state for images array
   const [productImages, setProductImages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -60,7 +59,16 @@ const AdminProducts = () => {
     if (error) {
       console.error('Error fetching products:', error);
     } else {
-      setProducts(data || []);
+      setProducts(
+        (data || []).map((product: any) => ({
+          ...product,
+          images: Array.isArray(product.images)
+            ? product.images
+            : product.image_url
+              ? [product.image_url]
+              : []
+        }))
+      );
     }
     setLoading(false);
   };
@@ -79,7 +87,7 @@ const AdminProducts = () => {
 
   const openEditDialog = (product: Product) => {
     setEditingProduct(product);
-    setProductImages(product.images || [product.image_url]); // load images from new array field or fallback
+    setProductImages(product.images && product.images.length > 0 ? product.images : (product.image_url ? [product.image_url] : []));
     setActiveEdit(product.is_active);
     setIsDialogOpen(true);
   };
@@ -121,10 +129,13 @@ const AdminProducts = () => {
     }
   };
 
-  // handle submit: collect productImages
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const imagesArray = Array.isArray(productImages)
+      ? productImages
+      : (productImages ? [productImages] : []);
+
     const productData = {
       name: formData.get('name') as string,
       name_ar: formData.get('name_ar') as string,
@@ -133,8 +144,8 @@ const AdminProducts = () => {
       price: parseFloat(formData.get('price') as string),
       original_price: parseFloat(formData.get('original_price') as string) || null,
       category_id: formData.get('category_id') as string,
-      image_url: productImages.length ? productImages[0] : '', // use first image as main
-      images: productImages, // NEW: array of images
+      image_url: imagesArray.length ? imagesArray[0] : '', // use first image as main
+      images: imagesArray, // Always send an array, even if empty
       stock_quantity: parseInt(formData.get('stock_quantity') as string),
       is_featured: formData.get('is_featured') === 'true',
       is_active: formData.get('is_active') === 'true'
@@ -332,7 +343,7 @@ const AdminProducts = () => {
         {products.map((product) => (
           <Card key={product.id}>
             <CardHeader className="p-0">
-              <ProductImageGallery images={product.images || [product.image_url]} alt={product.name_ar} />
+              <ProductImageGallery images={product.images && product.images.length > 0 ? product.images : (product.image_url ? [product.image_url] : [])} alt={product.name_ar} />
               <div className="absolute top-2 right-2">
                 <Button
                   variant={product.is_active ? 'default' : 'outline'}

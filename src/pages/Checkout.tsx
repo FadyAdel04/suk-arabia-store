@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
@@ -232,7 +231,8 @@ const Checkout = () => {
                         />
                         <div className="flex-1">
                           <div className="font-medium">{item.product.name_ar}</div>
-                          <div className="text-gray-500 text-sm line-clamp-2">{item.product.description_ar}</div>
+                          {/* Remove description_ar as it's not in item.product type */}
+                          {/* <div className="text-gray-500 text-sm line-clamp-2">{item.product.description_ar}</div> */}
                           <div className="text-gray-600 mt-2 flex gap-2">
                             <span>الكمية: <span className="font-semibold">{item.quantity}</span></span>
                             <span>السعر: <span className="font-semibold">{item.product.price.toLocaleString()} جنيه</span></span>
