@@ -3,38 +3,76 @@ import React, { useEffect, useState } from 'react';
 import { Laptop, Smartphone, Camera, Headphones, Watch, Tablet } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-const categoryIconMap: Record<
-  string,
-  {
-    icon: React.ComponentType<{ className?: string }>;
-    color: string;
-  }
-> = {
-  'أجهزة كمبيوتر': { icon: Laptop, color: 'bg-blue-100 text-blue-600' },
-  'هواتف ذكية': { icon: Smartphone, color: 'bg-green-100 text-green-600' },
-  'كاميرات': { icon: Camera, color: 'bg-purple-100 text-purple-600' },
-  'سماعات': { icon: Headphones, color: 'bg-orange-100 text-orange-600' },
-  'ساعات ذكية': { icon: Watch, color: 'bg-red-100 text-red-600' },
-  'أجهزة لوحية': { icon: Tablet, color: 'bg-teal-100 text-teal-600' },
+type CatIconInfo = {
+  keys: string[]; // All possible names (ar/en) for mapping
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
 };
 
+// List of recognized names (ar/en etc.), feels robust for future expansion
+const CATEGORY_ICON_MAPPINGS: CatIconInfo[] = [
+  {
+    keys: ["أجهزة كمبيوتر", "اجهزة كمبيوتر", "computer", "كمبيوتر", "laptop", "laptops", "pcs", "pc"],
+    icon: Laptop,
+    color: 'bg-blue-100 text-blue-600',
+  },
+  {
+    keys: ["هواتف ذكية", "هاتف ذكي", "هواتف", "هواتف محمولة", "phone", "smartphone", "mobile", "mobiles", "cellphone"],
+    icon: Smartphone,
+    color: 'bg-green-100 text-green-600',
+  },
+  {
+    keys: ["كاميرات", "كاميرا", "camera", "cameras"],
+    icon: Camera,
+    color: 'bg-purple-100 text-purple-600',
+  },
+  {
+    keys: ["سماعات", "سماعه", "headphone", "headphones", "earbuds", "سماعات الرأس"],
+    icon: Headphones,
+    color: 'bg-orange-100 text-orange-600',
+  },
+  {
+    keys: ["ساعات ذكية", "ساعة ذكية", "ساعة", "watch", "smartwatch", "watches"],
+    icon: Watch,
+    color: 'bg-red-100 text-red-600',
+  },
+  {
+    keys: ["أجهزة لوحية", "جهاز لوحي", "tablet", "tablets", "ipad"],
+    icon: Tablet,
+    color: 'bg-teal-100 text-teal-600',
+  },
+];
+
+function getCategoryIconConfig(categoryName: string) {
+  if (!categoryName) return { icon: Laptop, color: 'bg-blue-100 text-blue-600' };
+  const normalized = categoryName.trim().toLowerCase();
+  for (const mapping of CATEGORY_ICON_MAPPINGS) {
+    if (mapping.keys.some(
+      key => key.toLowerCase() === normalized
+    )) {
+      return { icon: mapping.icon, color: mapping.color };
+    }
+  }
+  // Fallback default
+  return { icon: Laptop, color: 'bg-blue-100 text-blue-600' };
+}
+
 const Categories = () => {
-  const [categories, setCategories] = useState([]);
-  const [productCounts, setProductCounts] = useState({});
+  const [categories, setCategories] = useState<any[]>([]);
+  const [productCounts, setProductCounts] = useState<{[k: string]: number}>({});
 
   useEffect(() => {
-    // Fetch categories from DB, then count products per category
     supabase
       .from('categories')
       .select('*')
       .then((res) => {
-        setCategories(res.data);
-        countProductsPerCategory(res.data);
+        setCategories(res.data || []);
+        countProductsPerCategory(res.data || []);
       });
   }, []);
 
-  const countProductsPerCategory = async (cats) => {
-    const cpy = {};
+  const countProductsPerCategory = async (cats: any[]) => {
+    const cpy: {[k:string]: number} = {};
     for (const cat of cats) {
       const { count } = await supabase
         .from('products')
@@ -60,12 +98,7 @@ const Categories = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6">
           {categories.map((category) => {
-            const config = categoryIconMap[category.name_ar] || {
-              icon: Laptop,
-              color: 'bg-blue-100 text-blue-600',
-            };
-            const Icon = config.icon;
-            const color = config.color;
+            const { icon: Icon, color } = getCategoryIconConfig(category.name_ar || category.name);
             return (
               <div
                 key={category.id}
