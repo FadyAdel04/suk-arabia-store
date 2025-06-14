@@ -114,16 +114,26 @@ const Checkout = () => {
       if (itemsError) throw itemsError;
 
       // 3. Decrement product stock (run in parallel for all)
-      for (const item of items) {
-        await supabase
+      // Use Promise.all and also catch errors for any failed update
+      await Promise.all(items.map(async (item) => {
+        const newStock = (item.product.stock_quantity - item.quantity) < 0
+          ? 0
+          : item.product.stock_quantity - item.quantity;
+        const { error: updateError } = await supabase
           .from('products')
-          .update({ stock_quantity: item.product.stock_quantity - item.quantity })
+          .update({ stock_quantity: newStock })
           .eq('id', item.product_id);
-      }
+        if (updateError) {
+          console.error(`Error updating stock for product ${item.product_id}:`, updateError);
+        }
+      }));
 
       // 4. Clear cart
       await clearCart();
 
+      // 5. Force refresh home/featured (if you have a state mgmt or event, put it here)
+      // Optionally: use something like window.location.reload() or a global event, but not best practice
+      // Here, just show a toast
       toast.success('تم إرسال طلبك بنجاح!');
       navigate('/orders');
     } catch (error) {

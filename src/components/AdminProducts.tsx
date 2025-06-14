@@ -136,49 +136,74 @@ const AdminProducts = () => {
       ? productImages
       : (productImages ? [productImages] : []);
 
+    // Prevent submit if category not chosen
+    const category_id = formData.get('category_id') as string;
+    if (!category_id || category_id === 'none') {
+      toast.error('يرجى اختيار الفئة');
+      return;
+    }
+
+    const name = formData.get('name') as string;
+    const name_ar = formData.get('name_ar') as string;
+    const priceVal = formData.get('price') as string;
+    const stockVal = formData.get('stock_quantity') as string;
+
+    // Check for required fields
+    if (!name || !name_ar || !priceVal || !stockVal) {
+      toast.error('الرجاء إدخال جميع الحقول الإلزامية');
+      return;
+    }
+
     const productData = {
-      name: formData.get('name') as string,
-      name_ar: formData.get('name_ar') as string,
+      name,
+      name_ar,
       description: formData.get('description') as string,
       description_ar: formData.get('description_ar') as string,
-      price: parseFloat(formData.get('price') as string),
+      price: parseFloat(priceVal),
       original_price: parseFloat(formData.get('original_price') as string) || null,
-      category_id: formData.get('category_id') as string,
-      image_url: imagesArray.length ? imagesArray[0] : '', // use first image as main
-      images: imagesArray, // Always send an array, even if empty
-      stock_quantity: parseInt(formData.get('stock_quantity') as string),
+      category_id,
+      image_url: imagesArray.length ? imagesArray[0] : '',
+      images: imagesArray,
+      stock_quantity: parseInt(stockVal, 10),
       is_featured: formData.get('is_featured') === 'true',
       is_active: formData.get('is_active') === 'true'
     };
 
-    if (editingProduct) {
-      const { error } = await supabase
-        .from('products')
-        .update(productData)
-        .eq('id', editingProduct.id);
+    try {
+      if (editingProduct) {
+        const { error } = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id);
 
-      if (error) {
-        toast.error('خطأ في تحديث المنتج');
+        if (error) {
+          console.error('Error updating product:', error); // Log full error
+          toast.error('خطأ في تحديث المنتج');
+        } else {
+          toast.success('تم تحديث المنتج بنجاح');
+          fetchProducts();
+          setIsDialogOpen(false);
+          setEditingProduct(null);
+          setProductImageUrl('');
+        }
       } else {
-        toast.success('تم تحديث المنتج بنجاح');
-        fetchProducts();
-        setIsDialogOpen(false);
-        setEditingProduct(null);
-        setProductImageUrl('');
-      }
-    } else {
-      const { error } = await supabase
-        .from('products')
-        .insert(productData);
+        const { error } = await supabase
+          .from('products')
+          .insert(productData);
 
-      if (error) {
-        toast.error('خطأ في إضافة المنتج');
-      } else {
-        toast.success('تم إضافة المنتج بنجاح');
-        fetchProducts();
-        setIsDialogOpen(false);
-        setProductImageUrl('');
+        if (error) {
+          console.error('Error adding product:', error);
+          toast.error('خطأ في إضافة المنتج');
+        } else {
+          toast.success('تم إضافة المنتج بنجاح');
+          fetchProducts();
+          setIsDialogOpen(false);
+          setProductImageUrl('');
+        }
       }
+    } catch (err: any) {
+      console.error('Unexpected error in handleSubmit:', err); // Log unexpected errors
+      toast.error('حدث خطأ غير متوقع');
     }
   };
 
