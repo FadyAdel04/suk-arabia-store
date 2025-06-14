@@ -1,7 +1,9 @@
+
 import React from 'react';
 import { Button } from './ui/button';
-import { Clock, Gift, Zap, Percent } from 'lucide-react';
+import { Clock, Gift, Zap, Percent, ShoppingCart } from 'lucide-react';
 import { Link } from 'react-router-dom';
+
 const PromotionalOffers = () => {
   return (
     <section className="py-16 bg-white">
@@ -64,42 +66,67 @@ const PromotionalOffers = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Offer */}
+          {/* Main Offer with enhanced colorful style */}
           <div className="lg:col-span-2">
-            <div className="relative bg-gradient-to-l from-primary-600 to-primary-700 rounded-2xl p-8 text-white overflow-hidden">
+            <div className="relative rounded-2xl p-10 overflow-hidden text-white shadow-xl
+             bg-gradient-to-tr from-blue-700 via-purple-600 to-cyan-400 border-2 border-blue-200 animate-fade-in">
+              {/* Floating Decorative Icons */}
+              <Percent className="absolute top-8 left-8 opacity-40 w-14 h-14 text-yellow-300 -z-0 animate-pulse" />
+              <Gift className="absolute bottom-12 right-10 opacity-25 w-20 h-20 text-pink-300 -z-0 animate-bounce" />
+              <Zap className="absolute top-1/2 left-1/3 opacity-20 w-16 h-16 text-teal-200 -z-0 animate-spin" style={{ animationDuration: '7s'}} />
+              {/* Offer Content */}
               <div className="relative z-10">
-                <div className="flex items-center gap-2 mb-4">
-                  <Clock className="h-6 w-6" />
-                  <span className="font-semibold">عرض لفترة محدودة</span>
+                <div className="flex items-center gap-2 mb-5">
+                  <Clock className="h-7 w-7 text-yellow-400" />
+                  <span className="font-semibold text-lg drop-shadow">عرض لفترة محدودة</span>
                 </div>
-                <h3 className="text-3xl lg:text-4xl font-bold mb-4">
+                <h3 className="text-3xl lg:text-4xl font-extrabold mb-4 drop-shadow-lg flex items-center gap-3">
+                  <Percent className="h-8 w-8 text-yellow-200" />
                   خصم يصل إلى 50%
                 </h3>
-                <p className="text-xl mb-6 opacity-90">
-                  على مجموعة مختارة من أجهزة الكمبيوتر المحمولة والإلكترونيات
+                <p className="text-xl mb-7 opacity-90 flex items-center gap-2">
+                  <ShoppingCart className="h-6 w-6 text-pink-200" />
+                  على مجموعة مختارة من أجهزة الكمبيوتر المحمولة والإلكترونيات المتطورة بأسعار لا تفوت!
                 </p>
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">12</div>
-                    <div className="text-sm opacity-75">ساعة</div>
+                {/* Offer Features */}
+                <div className="flex flex-wrap gap-6 mb-7">
+                  <div className="bg-white/20 backdrop-blur-md rounded-xl px-5 py-3 flex items-center gap-3 shadow-lg">
+                    <Gift className="h-6 w-6 text-green-200" />
+                    <span className="font-medium">هدايا حصرية مع كل طلب</span>
                   </div>
-                  <div className="text-2xl font-bold">:</div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">45</div>
-                    <div className="text-sm opacity-75">دقيقة</div>
+                  <div className="bg-white/20 backdrop-blur-md rounded-xl px-5 py-3 flex items-center gap-3 shadow-lg">
+                    <Zap className="h-6 w-6 text-orange-200" />
+                    <span className="font-medium">توصيل سريع لجميع المناطق</span>
                   </div>
-                  <div className="text-2xl font-bold">:</div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">30</div>
-                    <div className="text-sm opacity-75">ثانية</div>
+                  <div className="bg-white/20 backdrop-blur-md rounded-xl px-5 py-3 flex items-center gap-3 shadow-lg">
+                    <Clock className="h-6 w-6 text-yellow-100" />
+                    <span className="font-medium">العرض ساري لمدة محدودة فقط</span>
                   </div>
                 </div>
-                <Button className="bg-white text-primary hover:bg-gray-100 font-bold">
+                {/* Simple Countdown */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-yellow-300 drop-shadow-sm">12</div>
+                    <div className="text-sm opacity-90">ساعة</div>
+                  </div>
+                  <div className="text-3xl font-bold">:</div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-yellow-100 drop-shadow-sm">45</div>
+                    <div className="text-sm opacity-90">دقيقة</div>
+                  </div>
+                  <div className="text-3xl font-bold">:</div>
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-white drop-shadow-sm">30</div>
+                    <div className="text-sm opacity-90">ثانية</div>
+                  </div>
+                </div>
+                <Button className="bg-yellow-300 text-blue-900 font-bold shadow-lg hover:bg-yellow-400 text-lg px-8">
                   تسوق الآن
                 </Button>
               </div>
-              <div className="absolute -left-20 -bottom-20 opacity-10">
-                <div className="w-40 h-40 bg-white rounded-full"></div>
+              {/* Additional subtle gradient light */}
+              <div className="absolute -left-20 -bottom-20 opacity-10 animate-pulse">
+                <div className="w-44 h-44 bg-yellow-200 rounded-full blur-2xl"></div>
               </div>
             </div>
           </div>
