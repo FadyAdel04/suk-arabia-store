@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -138,6 +137,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error clearing cart:', error);
     } else {
       setItems([]);
+      // Optionally: fetchCartItems(); // if you want to force refresh
     }
   };
 

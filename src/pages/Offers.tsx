@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/hooks/useCart';
 import { Clock, Star, ShoppingCart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface Product {
   id: string;
@@ -21,6 +22,7 @@ const Offers = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchOffers();
@@ -86,7 +88,16 @@ const Offers = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
-              <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 relative overflow-hidden">
+              <Card
+                key={product.id}
+                className="group hover:shadow-xl transition-all duration-300 relative overflow-hidden cursor-pointer"
+                onClick={() => navigate(`/product/${product.id}`)}
+                tabIndex={0}
+                role="button"
+                onKeyPress={e => {
+                  if (e.key === 'Enter' || e.key === ' ') navigate(`/product/${product.id}`);
+                }}
+              >
                 {/* Discount Badge */}
                 <div className="absolute top-4 right-4 z-10">
                   <Badge className="bg-red-500 text-white">
@@ -136,7 +147,10 @@ const Offers = () => {
 
                   {/* Add to Cart Button */}
                   <Button
-                    onClick={() => addToCart(product.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      addToCart(product.id);
+                    }}
                     className="w-full group-hover:bg-blue-700 transition-colors"
                     disabled={product.stock_quantity === 0}
                   >
