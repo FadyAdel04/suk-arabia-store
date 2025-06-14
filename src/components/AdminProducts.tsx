@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2 } from 'lucide-react';
@@ -154,6 +154,7 @@ const AdminProducts = () => {
       return;
     }
 
+    // Only include supported product columns!
     const productData = {
       name,
       name_ar,
@@ -162,11 +163,12 @@ const AdminProducts = () => {
       price: parseFloat(priceVal),
       original_price: parseFloat(formData.get('original_price') as string) || null,
       category_id,
+      // image_url supports multiple with the 1st image as primary
       image_url: imagesArray.length ? imagesArray[0] : '',
-      images: imagesArray,
       stock_quantity: parseInt(stockVal, 10),
       is_featured: formData.get('is_featured') === 'true',
       is_active: formData.get('is_active') === 'true'
+      // DO NOT include 'images': not a DB column!
     };
 
     try {
@@ -177,8 +179,8 @@ const AdminProducts = () => {
           .eq('id', editingProduct.id);
 
         if (error) {
-          console.error('Error updating product:', error); // Log full error
-          toast.error('خطأ في تحديث المنتج');
+          console.error('Error updating product:', error);
+          toast.error(error.message || 'خطأ في تحديث المنتج');
         } else {
           toast.success('تم تحديث المنتج بنجاح');
           fetchProducts();
@@ -193,7 +195,7 @@ const AdminProducts = () => {
 
         if (error) {
           console.error('Error adding product:', error);
-          toast.error('خطأ في إضافة المنتج');
+          toast.error(error.message || 'خطأ في إضافة المنتج');
         } else {
           toast.success('تم إضافة المنتج بنجاح');
           fetchProducts();
@@ -202,7 +204,7 @@ const AdminProducts = () => {
         }
       }
     } catch (err: any) {
-      console.error('Unexpected error in handleSubmit:', err); // Log unexpected errors
+      console.error('Unexpected error in handleSubmit:', err);
       toast.error('حدث خطأ غير متوقع');
     }
   };
@@ -228,6 +230,11 @@ const AdminProducts = () => {
                 {editingProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}
               </DialogTitle>
             </DialogHeader>
+            <DialogDescription>
+              {editingProduct
+                ? "قم بتحديث الحقول ثم اضغط على تحديث المنتج."
+                : "املأ التفاصيل لإضافة منتج جديد إلى المتجر."}
+            </DialogDescription>
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* --- Use Multiple Image Upload --- */}
               <ImageUpload
