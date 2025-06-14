@@ -154,7 +154,7 @@ const AdminProducts = () => {
       return;
     }
 
-    // Only include supported product columns!
+    // Include all supported product columns including images array
     const productData = {
       name,
       name_ar,
@@ -165,10 +165,11 @@ const AdminProducts = () => {
       category_id,
       // image_url supports multiple with the 1st image as primary
       image_url: imagesArray.length ? imagesArray[0] : '',
+      // Now we can include images array since we added the column
+      images: imagesArray,
       stock_quantity: parseInt(stockVal, 10),
       is_featured: formData.get('is_featured') === 'true',
       is_active: formData.get('is_active') === 'true'
-      // DO NOT include 'images': not a DB column!
     };
 
     try {
@@ -241,6 +242,8 @@ const AdminProducts = () => {
                 onImageUploaded={setProductImages}
                 currentImage={productImages}
               />
+              
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">الاسم (English)</Label>
@@ -262,6 +265,7 @@ const AdminProducts = () => {
                 </div>
               </div>
 
+              
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="description">الوصف (English)</Label>
@@ -281,6 +285,7 @@ const AdminProducts = () => {
                 </div>
               </div>
 
+              
               <div className="grid grid-cols-3 gap-4">
                 <div>
                   <Label htmlFor="price">السعر</Label>
@@ -315,6 +320,7 @@ const AdminProducts = () => {
                 </div>
               </div>
 
+              
               <div>
                 <Label htmlFor="category_id">الفئة</Label>
                 <Select name="category_id" defaultValue={editingProduct?.category_id || 'none'}>
@@ -371,6 +377,7 @@ const AdminProducts = () => {
         </Dialog>
       </div>
 
+      
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {products.map((product) => (
           <Card key={product.id}>
