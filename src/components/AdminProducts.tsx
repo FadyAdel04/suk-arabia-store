@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import ImageUpload from './ImageUpload';
+import ProductImageGallery from './ProductImageGallery';
 
 interface Product {
   id: string;
@@ -22,6 +22,7 @@ interface Product {
   original_price: number | null;
   category_id: string;
   image_url: string;
+  images: string[];
   stock_quantity: number;
   is_featured: boolean;
   is_active: boolean;
@@ -41,6 +42,9 @@ const AdminProducts = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [productImageUrl, setProductImageUrl] = useState('');
   const [activeEdit, setActiveEdit] = useState<boolean | null>(null);
+
+  // NEW: state for images array
+  const [productImages, setProductImages] = useState<string[]>([]);
 
   useEffect(() => {
     fetchProducts();
@@ -73,10 +77,54 @@ const AdminProducts = () => {
     }
   };
 
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setProductImages(product.images || [product.image_url]); // load images from new array field or fallback
+    setActiveEdit(product.is_active);
+    setIsDialogOpen(true);
+  };
+
+  const openAddDialog = () => {
+    setEditingProduct(null);
+    setProductImages([]);
+    setActiveEdit(true);
+    setIsDialogOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
+
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      toast.error('خطأ في حذف المنتج');
+    } else {
+      toast.success('تم حذف المنتج بنجاح');
+      fetchProducts();
+    }
+  };
+
+  const handleToggleActive = async (id: string, val: boolean) => {
+    const { error } = await supabase
+      .from('products')
+      .update({ is_active: val })
+      .eq('id', id);
+
+    if (!error) {
+      toast.success(`تم ${val ? 'إظهار' : 'إخفاء'} المنتج`);
+      fetchProducts();
+    } else {
+      toast.error('تعذر تحديث حالة المنتج');
+    }
+  };
+
+  // handle submit: collect productImages
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-
     const productData = {
       name: formData.get('name') as string,
       name_ar: formData.get('name_ar') as string,
@@ -85,7 +133,8 @@ const AdminProducts = () => {
       price: parseFloat(formData.get('price') as string),
       original_price: parseFloat(formData.get('original_price') as string) || null,
       category_id: formData.get('category_id') as string,
-      image_url: productImageUrl || editingProduct?.image_url || '',
+      image_url: productImages.length ? productImages[0] : '', // use first image as main
+      images: productImages, // NEW: array of images
       stock_quantity: parseInt(formData.get('stock_quantity') as string),
       is_featured: formData.get('is_featured') === 'true',
       is_active: formData.get('is_active') === 'true'
@@ -122,50 +171,6 @@ const AdminProducts = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
-
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      toast.error('خطأ في حذف المنتج');
-    } else {
-      toast.success('تم حذف المنتج بنجاح');
-      fetchProducts();
-    }
-  };
-
-  const openEditDialog = (product: Product) => {
-    setEditingProduct(product);
-    setProductImageUrl(product.image_url);
-    setActiveEdit(product.is_active);
-    setIsDialogOpen(true);
-  };
-
-  const openAddDialog = () => {
-    setEditingProduct(null);
-    setProductImageUrl('');
-    setActiveEdit(true);
-    setIsDialogOpen(true);
-  };
-
-  const handleToggleActive = async (id: string, val: boolean) => {
-    const { error } = await supabase
-      .from('products')
-      .update({ is_active: val })
-      .eq('id', id);
-
-    if (!error) {
-      toast.success(`تم ${val ? 'إظهار' : 'إخفاء'} المنتج`);
-      fetchProducts();
-    } else {
-      toast.error('تعذر تحديث حالة المنتج');
-    }
-  };
-
   if (loading) {
     return <div>جاري التحميل...</div>;
   }
@@ -188,11 +193,11 @@ const AdminProducts = () => {
               </DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* --- Use Multiple Image Upload --- */}
               <ImageUpload
-                onImageUploaded={setProductImageUrl}
-                currentImage={productImageUrl}
+                onImageUploaded={setProductImages}
+                currentImage={productImages}
               />
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="name">الاسم (English)</Label>
@@ -327,22 +332,15 @@ const AdminProducts = () => {
         {products.map((product) => (
           <Card key={product.id}>
             <CardHeader className="p-0">
-              <div className="relative">
-                <img
-                  src={product.image_url || "/placeholder.svg"}
-                  alt={product.name_ar}
-                  className="w-full h-52 object-cover rounded-lg"
-                  style={{ aspectRatio: '1/1' }}
-                />
-                <div className="absolute top-2 right-2">
-                  <Button
-                    variant={product.is_active ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => handleToggleActive(product.id, !product.is_active)}
-                  >
-                    {product.is_active ? 'إخفاء' : 'إظهار'}
-                  </Button>
-                </div>
+              <ProductImageGallery images={product.images || [product.image_url]} alt={product.name_ar} />
+              <div className="absolute top-2 right-2">
+                <Button
+                  variant={product.is_active ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => handleToggleActive(product.id, !product.is_active)}
+                >
+                  {product.is_active ? 'إخفاء' : 'إظهار'}
+                </Button>
               </div>
             </CardHeader>
             <CardContent>

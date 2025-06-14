@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -9,95 +8,105 @@ import { toast } from 'sonner';
 import { Upload, Link, X } from 'lucide-react';
 
 interface ImageUploadProps {
-  onImageUploaded: (url: string) => void;
-  currentImage?: string;
+  onImageUploaded: (url: string[]) => void;
+  currentImage?: string[];
 }
 
 const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
-  const [imageUrl, setImageUrl] = useState('');
+  const [imageUrls, setImageUrls] = useState<string[]>(currentImage ? currentImage : []);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
+  const [imageUrlInput, setImageUrlInput] = useState('');
 
+  // Handle file upload (multiple)
   const uploadFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
-      
+
       if (!event.target.files || event.target.files.length === 0) {
         return;
       }
 
-      const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      let urls: string[] = [];
 
-      const { error: uploadError } = await supabase.storage
-        .from('products')
-        .upload(filePath, file);
+      for (const file of Array.from(event.target.files)) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${fileName}`;
 
-      if (uploadError) {
-        throw uploadError;
+        const { error: uploadError } = await supabase.storage
+          .from('products')
+          .upload(filePath, file);
+
+        if (uploadError) continue;
+
+        const { data } = supabase.storage
+          .from('products')
+          .getPublicUrl(filePath);
+
+        if (data?.publicUrl) {
+          urls.push(data.publicUrl);
+        }
       }
 
-      const { data } = supabase.storage
-        .from('products')
-        .getPublicUrl(filePath);
-
-      onImageUploaded(data.publicUrl);
-      toast.success('تم رفع الصورة بنجاح');
-      
+      const allUrls = [...imageUrls, ...urls];
+      setImageUrls(allUrls);
+      onImageUploaded(allUrls);
+      toast.success("تم رفع الصور بنجاح");
     } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error('خطأ في رفع الصورة');
+      toast.error("خطأ في رفع الصور");
     } finally {
       setUploading(false);
     }
   };
 
   const handleUrlSubmit = () => {
-    if (!imageUrl.trim()) {
-      toast.error('يرجى إدخال رابط صورة صحيح');
+    const val = imageUrlInput.trim();
+    if (!val) {
+      toast.error("يرجى إدخال رابط صورة صحيح");
       return;
     }
-    
-    onImageUploaded(imageUrl);
-    toast.success('تم تحديث رابط الصورة');
-    setImageUrl('');
+    const allUrls = [...imageUrls, val];
+    setImageUrls(allUrls);
+    onImageUploaded(allUrls);
+    setImageUrlInput('');
+    toast.success('تم إضافة رابط الصورة');
   };
 
+  const removeImage = (rmUrl: string) => {
+    const allUrls = imageUrls.filter((url) => url !== rmUrl);
+    setImageUrls(allUrls);
+    onImageUploaded(allUrls);
+  };
+
+  // ... UI code below ...
   return (
     <div className="space-y-4">
-      <Label>صورة المنتج</Label>
-      
-      {/* Current Image Preview */}
-      {currentImage && (
-        <Card>
-          <CardContent className="p-4">
-            <div className="relative">
-              <img
-                src={currentImage}
-                alt="صورة المنتج الحالية"
-                className="w-full h-40 object-cover rounded-lg"
-              />
-              <Button
-                variant="destructive"
-                size="sm"
-                className="absolute top-2 right-2"
-                onClick={() => onImageUploaded('')}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Upload Method Toggle */}
+      <Label>صور المنتج</Label>
+      {/* Preview */}
+      <div className="flex flex-wrap gap-2">
+        {imageUrls.map((img, i) => (
+          <div key={i} className="relative">
+            <img src={img} alt={`product-${i}`} className="w-24 h-24 object-cover rounded" />
+            <Button
+              variant="destructive"
+              size="icon"
+              className="absolute top-1 right-1"
+              onClick={() => removeImage(img)}
+              type="button"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+      {/* Upload UI controls */}
       <div className="flex space-x-2 space-x-reverse">
         <Button
           variant={uploadMethod === 'file' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setUploadMethod('file')}
+          type="button"
         >
           <Upload className="h-4 w-4 ml-2" />
           رفع ملف
@@ -106,37 +115,35 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
           variant={uploadMethod === 'url' ? 'default' : 'outline'}
           size="sm"
           onClick={() => setUploadMethod('url')}
+          type="button"
         >
           <Link className="h-4 w-4 ml-2" />
           رابط صورة
         </Button>
       </div>
-
-      {/* File Upload */}
-      {uploadMethod === 'file' && (
+      {/* File upload */}
+      {uploadMethod === "file" && (
         <div>
           <Input
             type="file"
             accept="image/*"
+            multiple
             onChange={uploadFile}
             disabled={uploading}
           />
-          {uploading && (
-            <p className="text-sm text-blue-600 mt-2">جاري رفع الصورة...</p>
-          )}
+          {uploading && <p className="text-sm text-blue-600 mt-2">جاري رفع الصور...</p>}
         </div>
       )}
-
-      {/* URL Input */}
-      {uploadMethod === 'url' && (
+      {/* URL input */}
+      {uploadMethod === "url" && (
         <div className="flex space-x-2 space-x-reverse">
           <Input
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
+            value={imageUrlInput}
+            onChange={(e) => setImageUrlInput(e.target.value)}
             placeholder="https://example.com/image.jpg"
           />
-          <Button onClick={handleUrlSubmit} disabled={!imageUrl.trim()}>
-            تحديث
+          <Button type="button" onClick={handleUrlSubmit} disabled={!imageUrlInput.trim()}>
+            إضافة
           </Button>
         </div>
       )}
