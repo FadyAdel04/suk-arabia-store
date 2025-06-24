@@ -1,20 +1,20 @@
+
 import React, { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent } from '@/components/ui/card';
 import { toast } from 'sonner';
 import { Upload, Link, X } from 'lucide-react';
 
 interface ImageUploadProps {
-  onImageUploaded: (url: string[]) => void;
+  onImageUploaded: (urls: string[]) => void;
   currentImage?: string[];
 }
 
 const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
   const [uploading, setUploading] = useState(false);
-  const [imageUrls, setImageUrls] = useState<string[]>(currentImage ? currentImage : []);
+  const [imageUrls, setImageUrls] = useState<string[]>(currentImage || []);
   const [uploadMethod, setUploadMethod] = useState<'file' | 'url'>('file');
   const [imageUrlInput, setImageUrlInput] = useState('');
 
@@ -35,13 +35,16 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
         const filePath = `${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('products')
+          .from('product-images')
           .upload(filePath, file);
 
-        if (uploadError) continue;
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          continue;
+        }
 
         const { data } = supabase.storage
-          .from('products')
+          .from('product-images')
           .getPublicUrl(filePath);
 
         if (data?.publicUrl) {
@@ -54,6 +57,7 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
       onImageUploaded(allUrls);
       toast.success("تم رفع الصور بنجاح");
     } catch (error) {
+      console.error('Error uploading images:', error);
       toast.error("خطأ في رفع الصور");
     } finally {
       setUploading(false);
@@ -79,7 +83,6 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
     onImageUploaded(allUrls);
   };
 
-  // ... UI code below ...
   return (
     <div className="space-y-4">
       <Label>صور المنتج</Label>
@@ -91,11 +94,11 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
             <Button
               variant="destructive"
               size="icon"
-              className="absolute top-1 right-1"
+              className="absolute -top-2 -right-2 w-6 h-6"
               onClick={() => removeImage(img)}
               type="button"
             >
-              <X className="h-4 w-4" />
+              <X className="h-3 w-3" />
             </Button>
           </div>
         ))}

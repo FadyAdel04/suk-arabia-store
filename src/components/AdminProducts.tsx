@@ -44,19 +44,19 @@ const AdminProducts = () => {
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
-  const [newProduct, setNewProduct] = useState<Partial<Product>>({
+  const [newProduct, setNewProduct] = useState({
     name: '',
     name_ar: '',
     description: '',
     description_ar: '',
     price: 0,
-    original_price: null,
-    image_url: null,
-    images: [],
+    original_price: null as number | null,
+    image_url: null as string | null,
+    images: [] as string[],
     stock_quantity: 0,
     is_featured: false,
     is_active: true,
-    category_id: null
+    category_id: null as string | null
   });
 
   useEffect(() => {
@@ -98,7 +98,20 @@ const AdminProducts = () => {
   const handleAddProduct = async () => {
     const { error } = await supabase
       .from('products')
-      .insert([newProduct]);
+      .insert([{
+        name: newProduct.name,
+        name_ar: newProduct.name_ar,
+        description: newProduct.description,
+        description_ar: newProduct.description_ar,
+        price: newProduct.price,
+        original_price: newProduct.original_price,
+        image_url: newProduct.image_url,
+        images: newProduct.images,
+        stock_quantity: newProduct.stock_quantity,
+        is_featured: newProduct.is_featured,
+        is_active: newProduct.is_active,
+        category_id: newProduct.category_id
+      }]);
 
     if (error) {
       console.error('Error adding product:', error);
@@ -299,9 +312,8 @@ const AdminProducts = () => {
               <div className="space-y-2">
                 <Label>صور المنتج</Label>
                 <ImageUpload
-                  onUpload={(urls) => handleImageUpload(urls, false)}
-                  existingImages={newProduct.images || []}
-                  bucketName="product-images"
+                  onImageUploaded={(urls) => handleImageUpload(urls, false)}
+                  currentImage={newProduct.images}
                 />
               </div>
 
@@ -471,9 +483,8 @@ const AdminProducts = () => {
                           <div className="space-y-2">
                             <Label>صور المنتج</Label>
                             <ImageUpload
-                              onUpload={(urls) => handleImageUpload(urls, true)}
-                              existingImages={editingProduct.images || []}
-                              bucketName="product-images"
+                              onImageUploaded={(urls) => handleImageUpload(urls, true)}
+                              currentImage={editingProduct.images || []}
                             />
                           </div>
 
