@@ -2,35 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
-import { Plus, Edit, Trash2, Image } from 'lucide-react';
-import ImageUpload from './ImageUpload';
-import ProductImageGallery from './ProductImageGallery';
+import { Plus, Edit, Trash2, Upload, X } from 'lucide-react';
 
 interface Product {
   id: string;
-  name: string;
   name_ar: string;
-  description: string;
   description_ar: string;
   price: number;
-  original_price: number | null;
-  category_id: string;
+  original_price: number;
   image_url: string;
   images: string[];
   stock_quantity: number;
   is_featured: boolean;
   is_active: boolean;
+  category_id: string;
 }
 
 interface Category {
   id: string;
-  name: string;
   name_ar: string;
 }
 
@@ -39,9 +35,21 @@ const AdminProducts = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
   const [productImages, setProductImages] = useState<string[]>([]);
-  const [activeEdit, setActiveEdit] = useState<boolean | null>(null);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    name_ar: '',
+    description: '',
+    description_ar: '',
+    price: 0,
+    original_price: 0,
+    category_id: '',
+    stock_quantity: 0,
+    is_featured: false,
+    is_active: true,
+    images: [] as string[]
+  });
 
   useEffect(() => {
     fetchProducts();
@@ -49,6 +57,7 @@ const AdminProducts = () => {
   }, []);
 
   const fetchProducts = async () => {
+    setLoading(true);
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -56,17 +65,9 @@ const AdminProducts = () => {
 
     if (error) {
       console.error('Error fetching products:', error);
+      toast.error('Failed to fetch products.');
     } else {
-      setProducts(
-        (data || []).map((product: any) => ({
-          ...product,
-          images: Array.isArray(product.images)
-            ? product.images
-            : product.image_url
-              ? [product.image_url]
-              : []
-        }))
-      );
+      setProducts(data || []);
     }
     setLoading(false);
   };
@@ -78,27 +79,99 @@ const AdminProducts = () => {
 
     if (error) {
       console.error('Error fetching categories:', error);
+      toast.error('Failed to fetch categories.');
     } else {
       setCategories(data || []);
     }
   };
 
-  const openEditDialog = (product: Product) => {
-    setEditingProduct(product);
-    setProductImages(product.images && product.images.length > 0 ? product.images : (product.image_url ? [product.image_url] : []));
-    setActiveEdit(product.is_active);
-    setIsDialogOpen(true);
+  const addProduct = async () => {
+    if (!newProduct.name || !newProduct.name_ar || !newProduct.description || !newProduct.description_ar || !newProduct.price || !newProduct.category_id || !newProduct.stock_quantity) {
+      toast.error('الرجاء ملء جميع الحقول');
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .insert([
+        {
+          name: newProduct.name,
+          name_ar: newProduct.name_ar,
+          description: newProduct.description,
+          description_ar: newProduct.description_ar,
+          price: newProduct.price,
+          original_price: newProduct.original_price || null,
+          category_id: newProduct.category_id,
+          stock_quantity: newProduct.stock_quantity,
+          is_featured: newProduct.is_featured,
+          is_active: newProduct.is_active,
+          image_url: newProduct.images[0] || null,
+          images: newProduct.images
+        }
+      ]);
+
+    if (error) {
+      console.error('Error adding product:', error);
+      toast.error('Failed to add product.');
+    } else {
+      toast.success('Product added successfully!');
+      setProducts([...products, ...(data || [])]);
+      setNewProduct({
+        name: '',
+        name_ar: '',
+        description: '',
+        description_ar: '',
+        price: 0,
+        original_price: 0,
+        category_id: '',
+        stock_quantity: 0,
+        is_featured: false,
+        is_active: true,
+        images: [] as string[]
+      });
+      setProductImages([]);
+      setShowAddForm(false);
+    }
   };
 
-  const openAddDialog = () => {
-    setEditingProduct(null);
-    setProductImages([]);
-    setActiveEdit(true);
-    setIsDialogOpen(true);
+  const updateProduct = async () => {
+    if (!editingProduct) return;
+
+    const { error } = await supabase
+      .from('products')
+      .update({
+        name: editingProduct.name,
+        name_ar: editingProduct.name_ar,
+        description: editingProduct.description,
+        description_ar: editingProduct.description_ar,
+        price: editingProduct.price,
+        original_price: editingProduct.original_price || null,
+        category_id: editingProduct.category_id,
+        stock_quantity: editingProduct.stock_quantity,
+        is_featured: editingProduct.is_featured,
+        is_active: editingProduct.is_active,
+        image_url: editingProduct.images[0] || null,
+        images: editingProduct.images
+      })
+      .eq('id', editingProduct.id);
+
+    if (error) {
+      console.error('Error updating product:', error);
+      toast.error('Failed to update product.');
+    } else {
+      toast.success('Product updated successfully!');
+      setProducts(
+        products.map((product) =>
+          product.id === editingProduct.id ? editingProduct : product
+        )
+      );
+      setEditingProduct(null);
+    }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا المنتج؟')) return;
+  const deleteProduct = async (id: string) => {
+    const confirmDelete = window.confirm('Are you sure you want to delete this product?');
+    if (!confirmDelete) return;
 
     const { error } = await supabase
       .from('products')
@@ -106,365 +179,417 @@ const AdminProducts = () => {
       .eq('id', id);
 
     if (error) {
-      toast.error('خطأ في حذف المنتج');
+      console.error('Error deleting product:', error);
+      toast.error('Failed to delete product.');
     } else {
-      toast.success('تم حذف المنتج بنجاح');
-      fetchProducts();
+      toast.success('Product deleted successfully!');
+      setProducts(products.filter((product) => product.id !== id));
     }
   };
 
-  const handleToggleActive = async (id: string, val: boolean) => {
-    const { error } = await supabase
-      .from('products')
-      .update({ is_active: val })
-      .eq('id', id);
-
-    if (!error) {
-      toast.success(`تم ${val ? 'إظهار' : 'إخفاء'} المنتج`);
-      fetchProducts();
-    } else {
-      toast.error('تعذر تحديث حالة المنتج');
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    const imagesArray = Array.isArray(productImages)
-      ? productImages
-      : (productImages ? [productImages] : []);
-
-    // Prevent submit if category not chosen
-    const category_id = formData.get('category_id') as string;
-    if (!category_id || category_id === 'none') {
-      toast.error('يرجى اختيار الفئة');
-      return;
-    }
-
-    const name = formData.get('name') as string;
-    const name_ar = formData.get('name_ar') as string;
-    const priceVal = formData.get('price') as string;
-    const stockVal = formData.get('stock_quantity') as string;
-
-    // Check for required fields
-    if (!name || !name_ar || !priceVal || !stockVal) {
-      toast.error('الرجاء إدخال جميع الحقول الإلزامية');
-      return;
-    }
-
-    // Include all supported product columns including images array
-    const productData = {
-      name,
-      name_ar,
-      description: formData.get('description') as string,
-      description_ar: formData.get('description_ar') as string,
-      price: parseFloat(priceVal),
-      original_price: parseFloat(formData.get('original_price') as string) || null,
-      category_id,
-      // image_url supports multiple with the 1st image as primary
-      image_url: imagesArray.length ? imagesArray[0] : '',
-      // Now we can include images array since we added the column
-      images: imagesArray,
-      stock_quantity: parseInt(stockVal, 10),
-      is_featured: formData.get('is_featured') === 'true',
-      is_active: formData.get('is_active') === 'true'
-    };
-
+  const handleImageUpload = async (file: File) => {
     try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `products/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      const newImageUrl = data.publicUrl;
+      
       if (editingProduct) {
-        const { error } = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', editingProduct.id);
-
-        if (error) {
-          console.error('Error updating product:', error);
-          toast.error(error.message || 'خطأ في تحديث المنتج');
-        } else {
-          toast.success('تم تحديث المنتج بنجاح');
-          fetchProducts();
-          setIsDialogOpen(false);
-          setEditingProduct(null);
-          setProductImageUrl('');
-        }
+        const updatedImages = [...(editingProduct.images || []), newImageUrl];
+        setEditingProduct({ ...editingProduct, images: updatedImages });
       } else {
-        const { error } = await supabase
-          .from('products')
-          .insert(productData);
-
-        if (error) {
-          console.error('Error adding product:', error);
-          toast.error(error.message || 'خطأ في إضافة المنتج');
-        } else {
-          toast.success('تم إضافة المنتج بنجاح');
-          fetchProducts();
-          setIsDialogOpen(false);
-          setProductImageUrl('');
-        }
+        setProductImages([...productImages, newImageUrl]);
+        setNewProduct({ ...newProduct, images: [...productImages, newImageUrl] });
       }
-    } catch (err: any) {
-      console.error('Unexpected error in handleSubmit:', err);
-      toast.error('حدث خطأ غير متوقع');
+      
+      toast.success('تم رفع الصورة بنجاح');
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast.error('خطأ في رفع الصورة');
     }
   };
 
-  if (loading) {
-    return <div>جاري التحميل...</div>;
-  }
+  const removeImage = (index: number) => {
+    if (editingProduct) {
+      const updatedImages = editingProduct.images?.filter((_, i) => i !== index) || [];
+      setEditingProduct({ ...editingProduct, images: updatedImages });
+    } else {
+      const updatedImages = productImages.filter((_, i) => i !== index);
+      setProductImages(updatedImages);
+      setNewProduct({ ...newProduct, images: updatedImages });
+    }
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">المنتجات</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={openAddDialog}>
-              <Plus className="h-4 w-4 ml-2" />
-              إضافة منتج جديد
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingProduct ? 'تعديل المنتج' : 'إضافة منتج جديد'}
-              </DialogTitle>
-            </DialogHeader>
-            <DialogDescription>
-              {editingProduct
-                ? "قم بتحديث الحقول ثم اضغط على تحديث المنتج."
-                : "املأ التفاصيل لإضافة منتج جديد إلى المتجر."}
-            </DialogDescription>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Product Images Section */}
-              <div className="space-y-2">
-                <Label className="text-base font-medium flex items-center gap-2">
-                  <Image className="h-4 w-4" />
-                  صور المنتج
-                </Label>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                  <p className="text-sm text-gray-600">
-                    الصورة الأولى ستكون الصورة الرئيسية للمنتج. يمكنك إضافة المزيد من الصور التفصيلية.
-                  </p>
-                  <ImageUpload
-                    onImageUploaded={setProductImages}
-                    currentImage={productImages}
-                  />
-                  {productImages.length > 0 && (
-                    <div className="mt-3">
-                      <Label className="text-sm text-gray-600">معاينة الصور:</Label>
-                      <div className="grid grid-cols-4 gap-2 mt-2">
-                        {productImages.map((img, index) => (
-                          <div key={index} className="relative">
-                            <img 
-                              src={img} 
-                              alt={`صورة ${index + 1}`} 
-                              className="w-full h-20 object-cover rounded border"
-                            />
-                            {index === 0 && (
-                              <div className="absolute top-0 left-0 bg-blue-500 text-white text-xs px-1 rounded-br">
-                                رئيسية
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">الاسم (English)</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    defaultValue={editingProduct?.name || ''}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="name_ar">الاسم (العربية)</Label>
-                  <Input
-                    id="name_ar"
-                    name="name_ar"
-                    defaultValue={editingProduct?.name_ar || ''}
-                    required
-                  />
-                </div>
-              </div>
-
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="description">الوصف (English)</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    defaultValue={editingProduct?.description || ''}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="description_ar">الوصف (العربية)</Label>
-                  <Textarea
-                    id="description_ar"
-                    name="description_ar"
-                    defaultValue={editingProduct?.description_ar || ''}
-                  />
-                </div>
-              </div>
-
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <Label htmlFor="price">السعر</Label>
-                  <Input
-                    id="price"
-                    name="price"
-                    type="number"
-                    step="0.01"
-                    defaultValue={editingProduct?.price || ''}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="original_price">السعر الأصلي</Label>
-                  <Input
-                    id="original_price"
-                    name="original_price"
-                    type="number"
-                    step="0.01"
-                    defaultValue={editingProduct?.original_price || ''}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="stock_quantity">الكمية</Label>
-                  <Input
-                    id="stock_quantity"
-                    name="stock_quantity"
-                    type="number"
-                    defaultValue={editingProduct?.stock_quantity || ''}
-                    required
-                  />
-                </div>
-              </div>
-
-              
-              <div>
-                <Label htmlFor="category_id">الفئة</Label>
-                <Select name="category_id" defaultValue={editingProduct?.category_id || 'none'}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="اختر الفئة" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none" disabled>اختر الفئة</SelectItem>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name_ar}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="is_featured">منتج مميز</Label>
-                  <Select name="is_featured" defaultValue={editingProduct?.is_featured ? 'true' : 'false'}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">نعم</SelectItem>
-                      <SelectItem value="false">لا</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="is_active">عرض المنتج</Label>
-                  <Select
-                    name="is_active"
-                    defaultValue={editingProduct?.is_active ? 'true' : 'false'}
-                    onValueChange={(val) => setActiveEdit(val === 'true')}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="true">ظاهر في الموقع</SelectItem>
-                      <SelectItem value="false">مخفي</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Button type="submit" className="w-full">
-                {editingProduct ? 'تحديث المنتج' : 'إضافة المنتج'}
-              </Button>
-            </form>
-          </DialogContent>
-        </Dialog>
+        <h2 className="text-2xl font-bold">إدارة المنتجات</h2>
+        <Button onClick={() => setShowAddForm(!showAddForm)}>
+          {showAddForm ? 'إخفاء النموذج' : 'إضافة منتج جديد'}
+          <Plus className="h-4 w-4 ml-2" />
+        </Button>
       </div>
 
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product) => (
-          <Card key={product.id} className="relative">
-            <CardHeader className="p-0">
-              <div className="relative">
-                {product.images && product.images.length > 0 ? (
-                  <img
-                    src={product.images[0]}
-                    alt={product.name_ar}
-                    className="w-full h-48 object-cover rounded-t-lg"
+      {showAddForm && (
+        <Card>
+          <CardHeader>
+            <CardTitle>إضافة منتج جديد</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="name_ar">اسم المنتج (عربي)</Label>
+              <Input
+                id="name_ar"
+                type="text"
+                value={newProduct.name_ar}
+                onChange={(e) => setNewProduct({ ...newProduct, name_ar: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="name">اسم المنتج (انجليزي)</Label>
+              <Input
+                id="name"
+                type="text"
+                value={newProduct.name}
+                onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="description_ar">وصف المنتج (عربي)</Label>
+              <Textarea
+                id="description_ar"
+                value={newProduct.description_ar}
+                onChange={(e) => setNewProduct({ ...newProduct, description_ar: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">وصف المنتج (انجليزي)</Label>
+              <Textarea
+                id="description"
+                value={newProduct.description}
+                onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="price">السعر</Label>
+              <Input
+                id="price"
+                type="number"
+                value={newProduct.price}
+                onChange={(e) => setNewProduct({ ...newProduct, price: parseFloat(e.target.value) })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="original_price">السعر الأصلي</Label>
+              <Input
+                id="original_price"
+                type="number"
+                value={newProduct.original_price}
+                onChange={(e) => setNewProduct({ ...newProduct, original_price: parseFloat(e.target.value) })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="category_id">الفئة</Label>
+              <Select onValueChange={(value) => setNewProduct({ ...newProduct, category_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر فئة" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name_ar}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="stock_quantity">الكمية في المخزن</Label>
+              <Input
+                id="stock_quantity"
+                type="number"
+                value={newProduct.stock_quantity}
+                onChange={(e) => setNewProduct({ ...newProduct, stock_quantity: parseInt(e.target.value) })}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_featured"
+                checked={newProduct.is_featured}
+                onCheckedChange={(checked) => setNewProduct({ ...newProduct, is_featured: checked })}
+              />
+              <Label htmlFor="is_featured">منتج مميز</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={newProduct.is_active}
+                onCheckedChange={(checked) => setNewProduct({ ...newProduct, is_active: checked })}
+              />
+              <Label htmlFor="is_active">مفعل</Label>
+            </div>
+
+            {/* Image Upload Section */}
+            <div>
+              <Label>صور المنتج</Label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file);
+                    }}
                   />
-                ) : (
-                  <div className="w-full h-48 bg-gray-200 rounded-t-lg flex items-center justify-center">
-                    <Image className="h-8 w-8 text-gray-400" />
+                  <Button type="button" size="sm">
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {productImages.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {productImages.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={image}
+                          alt={`Product ${index + 1}`}
+                          className="w-full h-20 object-cover rounded border"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="absolute -top-2 -right-2 h-6 w-6 p-0"
+                          onClick={() => removeImage(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                        {index === 0 && (
+                          <Badge className="absolute bottom-1 left-1 text-xs">
+                            رئيسية
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
-                {product.images && product.images.length > 1 && (
-                  <div className="absolute bottom-2 left-2 bg-black bg-opacity-70 text-white text-xs px-2 py-1 rounded">
-                    +{product.images.length - 1} صور
+              </div>
+            </div>
+
+            <Button onClick={addProduct}>إضافة المنتج</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {editingProduct && (
+        <Card>
+          <CardHeader>
+            <CardTitle>تعديل المنتج</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label htmlFor="name_ar">اسم المنتج (عربي)</Label>
+              <Input
+                id="name_ar"
+                type="text"
+                value={editingProduct.name_ar}
+                onChange={(e) => setEditingProduct({ ...editingProduct, name_ar: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="name">اسم المنتج (انجليزي)</Label>
+              <Input
+                id="name"
+                type="text"
+                value={editingProduct.name}
+                onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="description_ar">وصف المنتج (عربي)</Label>
+              <Textarea
+                id="description_ar"
+                value={editingProduct.description_ar}
+                onChange={(e) => setEditingProduct({ ...editingProduct, description_ar: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="description">وصف المنتج (انجليزي)</Label>
+              <Textarea
+                id="description"
+                value={editingProduct.description}
+                onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="price">السعر</Label>
+              <Input
+                id="price"
+                type="number"
+                value={editingProduct.price}
+                onChange={(e) => setEditingProduct({ ...editingProduct, price: parseFloat(e.target.value) })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="original_price">السعر الأصلي</Label>
+              <Input
+                id="original_price"
+                type="number"
+                value={editingProduct.original_price || ''}
+                onChange={(e) => setEditingProduct({ ...editingProduct, original_price: parseFloat(e.target.value) })}
+              />
+            </div>
+            <div>
+              <Label htmlFor="category_id">الفئة</Label>
+              <Select onValueChange={(value) => setEditingProduct({ ...editingProduct, category_id: value })}>
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر فئة" value={editingProduct.category_id}>
+                    {categories.find(cat => cat.id === editingProduct.category_id)?.name_ar || "اختر فئة"}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name_ar}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="stock_quantity">الكمية في المخزن</Label>
+              <Input
+                id="stock_quantity"
+                type="number"
+                value={editingProduct.stock_quantity}
+                onChange={(e) => setEditingProduct({ ...editingProduct, stock_quantity: parseInt(e.target.value) })}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_featured"
+                checked={editingProduct.is_featured}
+                onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, is_featured: checked })}
+              />
+              <Label htmlFor="is_featured">منتج مميز</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={editingProduct.is_active}
+                onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, is_active: checked })}
+              />
+              <Label htmlFor="is_active">مفعل</Label>
+            </div>
+
+            {/* Image Upload Section for Edit */}
+            <div>
+              <Label>صور المنتج</Label>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file);
+                    }}
+                  />
+                  <Button type="button" size="sm">
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                </div>
+                
+                {editingProduct.images && editingProduct.images.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {editingProduct.images.map((image, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={image}
+                          alt={`Product ${index + 1}`}
+                          className="w-full h-20 object-cover rounded border"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="absolute -top-2 -right-2 h-6 w-6 p-0"
+                          onClick={() => removeImage(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                        {index === 0 && (
+                          <Badge className="absolute bottom-1 left-1 text-xs">
+                            رئيسية
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
-              <div className="absolute top-2 right-2">
-                <Button
-                  variant={product.is_active ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => handleToggleActive(product.id, !product.is_active)}
-                >
-                  {product.is_active ? 'إخفاء' : 'إظهار'}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <CardTitle className="mb-2">{product.name_ar}</CardTitle>
-              <p className="text-sm text-gray-600 mb-2 line-clamp-2">{product.description_ar}</p>
-              <div className="flex justify-between items-center mb-4">
-                <span className="font-bold text-lg">{product.price.toLocaleString()} جنيه</span>
-                <span className="text-sm text-gray-500">المخزون: {product.stock_quantity}</span>
-              </div>
-              <div className="flex space-x-2 space-x-reverse">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => openEditDialog(product)}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => handleDelete(product.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+
+            <Button onClick={updateProduct}>تعديل المنتج</Button>
+            <Button variant="secondary" onClick={() => setEditingProduct(null)}>إلغاء</Button>
+          </CardContent>
+        </Card>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {loading ? (
+          <div className="text-center">Loading products...</div>
+        ) : (
+          products.map((product) => (
+            <Card key={product.id}>
+              <CardHeader>
+                <CardTitle>{product.name_ar}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <img
+                  src={product.image_url || "/placeholder.svg"}
+                  alt={product.name_ar}
+                  className="w-full h-32 object-cover mb-4 rounded"
+                />
+                <p className="text-gray-600 line-clamp-2">{product.description_ar}</p>
+                <div className="flex justify-between items-center mt-4">
+                  <span>السعر: {product.price}</span>
+                  <span>المخزون: {product.stock_quantity}</span>
+                </div>
+                <div className="flex justify-end space-x-2 mt-4">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setEditingProduct(product)}
+                  >
+                    <Edit className="h-4 w-4 ml-2" />
+                    تعديل
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => deleteProduct(product.id)}
+                  >
+                    <Trash2 className="h-4 w-4 ml-2" />
+                    حذف
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
     </div>
   );

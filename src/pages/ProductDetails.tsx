@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { Star, ShoppingCart, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
+import RelatedProducts from '@/components/RelatedProducts';
 
 interface Product {
   id: string;
@@ -24,6 +25,7 @@ interface Product {
   category: {
     name_ar: string;
   };
+  category_id: string;
 }
 
 interface Review {
@@ -316,7 +318,7 @@ const ProductDetails = () => {
         </div>
 
         {/* Reviews Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Add Review */}
           <Card>
             <CardHeader>
@@ -408,6 +410,14 @@ const ProductDetails = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Related Products Section */}
+        {product.category_id && (
+          <RelatedProducts 
+            currentProductId={product.id} 
+            categoryId={product.category_id} 
+          />
+        )}
       </div>
     </div>
   );
