@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdminProducts from '@/components/AdminProducts';
 import AdminOrders from '@/components/AdminOrders';
+import AdminCoupons from '@/components/AdminCoupons';
 
 const Admin = () => {
   const { user } = useAuth();
@@ -69,9 +70,10 @@ const Admin = () => {
         <h1 className="text-3xl font-bold text-gray-900 mb-8">لوحة الإدارة</h1>
 
         <Tabs defaultValue="products" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="products">إدارة المنتجات</TabsTrigger>
             <TabsTrigger value="orders">إدارة الطلبات</TabsTrigger>
+            <TabsTrigger value="coupons">إدارة الكوبونات</TabsTrigger>
           </TabsList>
 
           <TabsContent value="products">
@@ -80,6 +82,10 @@ const Admin = () => {
 
           <TabsContent value="orders">
             <AdminOrders />
+          </TabsContent>
+
+          <TabsContent value="coupons">
+            <AdminCoupons />
           </TabsContent>
         </Tabs>
       </div>

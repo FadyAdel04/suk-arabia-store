@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
@@ -124,25 +125,7 @@ const Checkout = () => {
         .insert(orderItems);
       if (itemsError) throw itemsError;
 
-      // 3. Update coupon usage if coupon was applied
-      if (appliedCoupon) {
-        // Increment used count
-        await supabase
-          .from('coupons')
-          .update({ used_count: appliedCoupon.used_count + 1 })
-          .eq('id', appliedCoupon.id);
-
-        // Track usage
-        await supabase
-          .from('coupon_usage')
-          .insert({
-            coupon_id: appliedCoupon.id,
-            user_id: user.id,
-            order_id: order.id
-          });
-      }
-
-      // 4. Decrement product stock
+      // 3. Decrement product stock
       await Promise.all(items.map(async (item) => {
         const newStock = Math.max(0, item.product.stock_quantity - item.quantity);
         const { error: updateError } = await supabase
@@ -154,7 +137,7 @@ const Checkout = () => {
         }
       }));
 
-      // 5. Clear cart
+      // 4. Clear cart
       await clearCart();
 
       toast.success('تم إرسال طلبك بنجاح!');

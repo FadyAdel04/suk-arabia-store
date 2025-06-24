@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -11,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
-import { Pencil, Trash2, Plus, Upload } from 'lucide-react';
+import { Pencil, Trash2, Plus } from 'lucide-react';
 import ImageUpload from './ImageUpload';
+import ProductImageGallery from './ProductImageGallery';
 
 interface Product {
   id: string;
@@ -98,7 +98,7 @@ const AdminProducts = () => {
   const handleAddProduct = async () => {
     const { error } = await supabase
       .from('products')
-      .insert([{
+      .insert({
         name: newProduct.name,
         name_ar: newProduct.name_ar,
         description: newProduct.description,
@@ -111,7 +111,7 @@ const AdminProducts = () => {
         is_featured: newProduct.is_featured,
         is_active: newProduct.is_active,
         category_id: newProduct.category_id
-      }]);
+      });
 
     if (error) {
       console.error('Error adding product:', error);
@@ -310,7 +310,6 @@ const AdminProducts = () => {
               </div>
 
               <div className="space-y-2">
-                <Label>صور المنتج</Label>
                 <ImageUpload
                   onImageUploaded={(urls) => handleImageUpload(urls, false)}
                   currentImage={newProduct.images}
@@ -354,25 +353,50 @@ const AdminProducts = () => {
           <Card key={product.id}>
             <CardContent className="p-6">
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <h3 className="text-lg font-semibold">{product.name_ar}</h3>
-                    {product.is_featured && (
-                      <Badge variant="secondary">مميز</Badge>
-                    )}
-                    {!product.is_active && (
-                      <Badge variant="destructive">غير نشط</Badge>
+                <div className="flex items-start space-x-4 space-x-reverse flex-1">
+                  {/* Product Images */}
+                  <div className="w-32">
+                    {product.images && product.images.length > 0 ? (
+                      <ProductImageGallery 
+                        images={product.images} 
+                        alt={product.name_ar}
+                        className="w-32 h-32"
+                      />
+                    ) : product.image_url ? (
+                      <img 
+                        src={product.image_url} 
+                        alt={product.name_ar}
+                        className="w-32 h-32 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-32 h-32 bg-gray-200 rounded-lg flex items-center justify-center">
+                        <span className="text-gray-400 text-sm">لا توجد صورة</span>
+                      </div>
                     )}
                   </div>
-                  <p className="text-gray-600 mb-2">{product.description_ar}</p>
-                  <div className="flex items-center gap-4 text-sm text-gray-500">
-                    <span>السعر: {product.price.toLocaleString()} جنيه</span>
-                    <span>المخزون: {product.stock_quantity}</span>
-                    {product.category && (
-                      <span>الفئة: {product.category.name_ar}</span>
-                    )}
+                  
+                  {/* Product Info */}
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h3 className="text-lg font-semibold">{product.name_ar}</h3>
+                      {product.is_featured && (
+                        <Badge variant="secondary">مميز</Badge>
+                      )}
+                      {!product.is_active && (
+                        <Badge variant="destructive">غير نشط</Badge>
+                      )}
+                    </div>
+                    <p className="text-gray-600 mb-2">{product.description_ar}</p>
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      <span>السعر: {product.price.toLocaleString()} جنيه</span>
+                      <span>المخزون: {product.stock_quantity}</span>
+                      {product.category && (
+                        <span>الفئة: {product.category.name_ar}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
+                
                 <div className="flex space-x-2 space-x-reverse">
                   <Dialog>
                     <DialogTrigger asChild>
@@ -481,7 +505,6 @@ const AdminProducts = () => {
                           </div>
 
                           <div className="space-y-2">
-                            <Label>صور المنتج</Label>
                             <ImageUpload
                               onImageUploaded={(urls) => handleImageUpload(urls, true)}
                               currentImage={editingProduct.images || []}

@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
@@ -25,6 +26,7 @@ interface CartContextType {
   clearCart: () => Promise<void>;
   totalItems: number;
   totalPrice: number;
+  itemCount: number; // Added this for the header
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -137,12 +139,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       console.error('Error clearing cart:', error);
     } else {
       setItems([]);
-      // Optionally: fetchCartItems(); // if you want to force refresh
     }
   };
 
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = items.reduce((sum, item) => sum + (item.product.price * item.quantity), 0);
+  const itemCount = totalItems; // Same as totalItems for backward compatibility
 
   return (
     <CartContext.Provider value={{
@@ -153,7 +155,8 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       removeFromCart,
       clearCart,
       totalItems,
-      totalPrice
+      totalPrice,
+      itemCount
     }}>
       {children}
     </CartContext.Provider>
