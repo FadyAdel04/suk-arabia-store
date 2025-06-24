@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import OnlinePaymentForm from '@/components/OnlinePaymentForm';
+import CouponInput from '@/components/CouponInput';
 
 const Checkout = () => {
   const { items, totalPrice, clearCart } = useCart();
@@ -18,6 +19,8 @@ const Checkout = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
+  const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
+  const [discountAmount, setDiscountAmount] = useState(0);
   const [formData, setFormData] = useState({
     fullName: '',
     phone: '',
@@ -33,7 +36,8 @@ const Checkout = () => {
     cardHolder: ''
   });
 
-  // Fetch profile and autofill shipping info
+  const finalTotal = totalPrice - discountAmount;
+
   useEffect(() => {
     const fetchProfile = async () => {
       if (user) {
@@ -78,6 +82,11 @@ const Checkout = () => {
     });
   };
 
+  const handleApplyCoupon = (coupon: any, discount: number) => {
+    setAppliedCoupon(coupon);
+    setDiscountAmount(discount);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -88,12 +97,14 @@ const Checkout = () => {
         .from('orders')
         .insert({
           user_id: user.id,
-          total_amount: totalPrice,
+          total_amount: finalTotal,
           status: 'pending',
           payment_method: formData.paymentMethod,
           shipping_address: `${formData.address}, ${formData.city}`,
           phone: formData.phone,
-          notes: formData.notes
+          notes: formData.notes,
+          coupon_code: appliedCoupon?.code || null,
+          discount_amount: discountAmount
         })
         .select()
         .single();
@@ -113,12 +124,27 @@ const Checkout = () => {
         .insert(orderItems);
       if (itemsError) throw itemsError;
 
-      // 3. Decrement product stock (run in parallel for all)
-      // Use Promise.all and also catch errors for any failed update
+      // 3. Update coupon usage if coupon was applied
+      if (appliedCoupon) {
+        // Increment used count
+        await supabase
+          .from('coupons')
+          .update({ used_count: appliedCoupon.used_count + 1 })
+          .eq('id', appliedCoupon.id);
+
+        // Track usage
+        await supabase
+          .from('coupon_usage')
+          .insert({
+            coupon_id: appliedCoupon.id,
+            user_id: user.id,
+            order_id: order.id
+          });
+      }
+
+      // 4. Decrement product stock
       await Promise.all(items.map(async (item) => {
-        const newStock = (item.product.stock_quantity - item.quantity) < 0
-          ? 0
-          : item.product.stock_quantity - item.quantity;
+        const newStock = Math.max(0, item.product.stock_quantity - item.quantity);
         const { error: updateError } = await supabase
           .from('products')
           .update({ stock_quantity: newStock })
@@ -128,12 +154,9 @@ const Checkout = () => {
         }
       }));
 
-      // 4. Clear cart
+      // 5. Clear cart
       await clearCart();
 
-      // 5. Force refresh home/featured (if you have a state mgmt or event, put it here)
-      // Optionally: use something like window.location.reload() or a global event, but not best practice
-      // Here, just show a toast
       toast.success('تم إرسال طلبك بنجاح!');
       navigate('/orders');
     } catch (error) {
@@ -241,8 +264,6 @@ const Checkout = () => {
                         />
                         <div className="flex-1">
                           <div className="font-medium">{item.product.name_ar}</div>
-                          {/* Remove description_ar as it's not in item.product type */}
-                          {/* <div className="text-gray-500 text-sm line-clamp-2">{item.product.description_ar}</div> */}
                           <div className="text-gray-600 mt-2 flex gap-2">
                             <span>الكمية: <span className="font-semibold">{item.quantity}</span></span>
                             <span>السعر: <span className="font-semibold">{item.product.price.toLocaleString()} جنيه</span></span>
@@ -250,13 +271,33 @@ const Checkout = () => {
                         </div>
                       </div>
                     ))}
-                    <div className="border-t pt-4">
-                      <div className="flex justify-between font-bold text-lg">
-                        <span>المجموع الكلي:</span>
+                    
+                    <div className="border-t pt-4 space-y-2">
+                      <div className="flex justify-between">
+                        <span>المجموع الفرعي:</span>
                         <span>{totalPrice.toLocaleString()} جنيه</span>
+                      </div>
+                      {discountAmount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>الخصم:</span>
+                          <span>-{discountAmount.toLocaleString()} جنيه</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-lg border-t pt-2">
+                        <span>المجموع الكلي:</span>
+                        <span>{finalTotal.toLocaleString()} جنيه</span>
                       </div>
                     </div>
                   </div>
+
+                  <div className="mb-6">
+                    <CouponInput
+                      onApplyCoupon={handleApplyCoupon}
+                      totalAmount={totalPrice}
+                      appliedCoupon={appliedCoupon}
+                    />
+                  </div>
+
                   <div className="flex space-x-4 space-x-reverse">
                     <Button type="button" variant="outline" onClick={prevStep}>
                       السابق
