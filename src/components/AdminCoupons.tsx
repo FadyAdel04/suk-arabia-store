@@ -17,12 +17,13 @@ interface Coupon {
   code: string;
   discount_type: 'percentage' | 'fixed';
   discount_value: number;
-  min_order_amount?: number;
-  max_uses?: number;
+  min_order_amount: number;
+  max_uses: number | null;
   used_count: number;
-  expires_at?: string;
+  expires_at: string | null;
   is_active: boolean;
   created_at: string;
+  updated_at: string;
 }
 
 const AdminCoupons = () => {
@@ -36,7 +37,7 @@ const AdminCoupons = () => {
     discount_value: 0,
     min_order_amount: 0,
     max_uses: null as number | null,
-    expires_at: '',
+    expires_at: null as string | null,
     is_active: true
   });
 
@@ -54,7 +55,12 @@ const AdminCoupons = () => {
       console.error('Error fetching coupons:', error);
       toast.error('خطأ في تحميل الكوبونات');
     } else {
-      setCoupons(data || []);
+      // Type assertion to ensure proper typing
+      const typedCoupons = (data || []).map(coupon => ({
+        ...coupon,
+        discount_type: coupon.discount_type as 'percentage' | 'fixed'
+      }));
+      setCoupons(typedCoupons);
     }
     setLoading(false);
   };
@@ -66,9 +72,9 @@ const AdminCoupons = () => {
         code: newCoupon.code.toUpperCase(),
         discount_type: newCoupon.discount_type,
         discount_value: newCoupon.discount_value,
-        min_order_amount: newCoupon.min_order_amount || null,
+        min_order_amount: newCoupon.min_order_amount,
         max_uses: newCoupon.max_uses,
-        expires_at: newCoupon.expires_at || null,
+        expires_at: newCoupon.expires_at,
         is_active: newCoupon.is_active
       });
 
@@ -84,7 +90,7 @@ const AdminCoupons = () => {
         discount_value: 0,
         min_order_amount: 0,
         max_uses: null,
-        expires_at: '',
+        expires_at: null,
         is_active: true
       });
       fetchCoupons();
@@ -100,9 +106,9 @@ const AdminCoupons = () => {
         code: editingCoupon.code.toUpperCase(),
         discount_type: editingCoupon.discount_type,
         discount_value: editingCoupon.discount_value,
-        min_order_amount: editingCoupon.min_order_amount || null,
+        min_order_amount: editingCoupon.min_order_amount,
         max_uses: editingCoupon.max_uses,
-        expires_at: editingCoupon.expires_at || null,
+        expires_at: editingCoupon.expires_at,
         is_active: editingCoupon.is_active
       })
       .eq('id', editingCoupon.id);
@@ -147,7 +153,7 @@ const AdminCoupons = () => {
               إضافة كوبون جديد
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>إضافة كوبون جديد</DialogTitle>
             </DialogHeader>
@@ -201,7 +207,7 @@ const AdminCoupons = () => {
               </div>
 
               <div>
-                <Label htmlFor="max_uses">عدد مرات الاستخدام المسموح</Label>
+                <Label htmlFor="max_uses">الحد الأقصى للاستخدام (اتركه فارغاً لعدد غير محدود)</Label>
                 <Input
                   id="max_uses"
                   type="number"
@@ -210,7 +216,6 @@ const AdminCoupons = () => {
                     ...newCoupon, 
                     max_uses: e.target.value ? Number(e.target.value) : null 
                   })}
-                  placeholder="غير محدود"
                 />
               </div>
 
@@ -219,8 +224,11 @@ const AdminCoupons = () => {
                 <Input
                   id="expires_at"
                   type="datetime-local"
-                  value={newCoupon.expires_at}
-                  onChange={(e) => setNewCoupon({ ...newCoupon, expires_at: e.target.value })}
+                  value={newCoupon.expires_at || ''}
+                  onChange={(e) => setNewCoupon({ 
+                    ...newCoupon, 
+                    expires_at: e.target.value || null 
+                  })}
                 />
               </div>
 
@@ -255,25 +263,33 @@ const AdminCoupons = () => {
                   <div className="flex items-center gap-2 mb-2">
                     <h3 className="text-lg font-semibold">{coupon.code}</h3>
                     {coupon.is_active ? (
-                      <Badge variant="secondary">نشط</Badge>
+                      <Badge variant="default">نشط</Badge>
                     ) : (
                       <Badge variant="destructive">غير نشط</Badge>
                     )}
                   </div>
-                  <div className="space-y-1 text-sm text-gray-600">
-                    <p>
-                      الخصم: {coupon.discount_type === 'percentage' 
-                        ? `${coupon.discount_value}%` 
-                        : `${coupon.discount_value} جنيه`}
-                    </p>
-                    {coupon.min_order_amount && (
-                      <p>الحد الأدنى: {coupon.min_order_amount} جنيه</p>
-                    )}
-                    {coupon.max_uses && (
-                      <p>الاستخدام: {coupon.used_count}/{coupon.max_uses}</p>
-                    )}
+                  <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
+                    <div>
+                      <span className="font-medium">نوع الخصم: </span>
+                      {coupon.discount_type === 'percentage' ? 'نسبة مئوية' : 'مبلغ ثابت'}
+                    </div>
+                    <div>
+                      <span className="font-medium">قيمة الخصم: </span>
+                      {coupon.discount_type === 'percentage' ? `${coupon.discount_value}%` : `${coupon.discount_value} جنيه`}
+                    </div>
+                    <div>
+                      <span className="font-medium">الحد الأدنى: </span>
+                      {coupon.min_order_amount} جنيه
+                    </div>
+                    <div>
+                      <span className="font-medium">الاستخدام: </span>
+                      {coupon.used_count} / {coupon.max_uses || 'غير محدود'}
+                    </div>
                     {coupon.expires_at && (
-                      <p>ينتهي: {new Date(coupon.expires_at).toLocaleDateString('ar-EG')}</p>
+                      <div className="col-span-2">
+                        <span className="font-medium">ينتهي في: </span>
+                        {new Date(coupon.expires_at).toLocaleDateString('ar-EG')}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -289,22 +305,19 @@ const AdminCoupons = () => {
                         <Pencil className="h-4 w-4" />
                       </Button>
                     </DialogTrigger>
-                    <DialogContent>
+                    <DialogContent className="max-w-lg">
                       <DialogHeader>
                         <DialogTitle>تعديل الكوبون</DialogTitle>
                       </DialogHeader>
                       {editingCoupon && (
                         <div className="space-y-4">
-                          {/* Same form fields as add coupon but with editingCoupon state */}
+                          {/* Same form fields as add coupon, but with editing values */}
                           <div>
                             <Label htmlFor="edit_code">كود الكوبون</Label>
                             <Input
                               id="edit_code"
                               value={editingCoupon.code}
-                              onChange={(e) => setEditingCoupon({ 
-                                ...editingCoupon, 
-                                code: e.target.value.toUpperCase() 
-                              })}
+                              onChange={(e) => setEditingCoupon({ ...editingCoupon, code: e.target.value.toUpperCase() })}
                             />
                           </div>
 
@@ -312,9 +325,7 @@ const AdminCoupons = () => {
                             <Label htmlFor="edit_discount_type">نوع الخصم</Label>
                             <Select 
                               value={editingCoupon.discount_type} 
-                              onValueChange={(value: 'percentage' | 'fixed') => 
-                                setEditingCoupon({ ...editingCoupon, discount_type: value })
-                              }
+                              onValueChange={(value: 'percentage' | 'fixed') => setEditingCoupon({ ...editingCoupon, discount_type: value })}
                             >
                               <SelectTrigger>
                                 <SelectValue />
@@ -334,10 +345,7 @@ const AdminCoupons = () => {
                               id="edit_discount_value"
                               type="number"
                               value={editingCoupon.discount_value}
-                              onChange={(e) => setEditingCoupon({ 
-                                ...editingCoupon, 
-                                discount_value: Number(e.target.value) 
-                              })}
+                              onChange={(e) => setEditingCoupon({ ...editingCoupon, discount_value: Number(e.target.value) })}
                             />
                           </div>
 
@@ -346,23 +354,20 @@ const AdminCoupons = () => {
                             <Input
                               id="edit_min_order_amount"
                               type="number"
-                              value={editingCoupon.min_order_amount || ''}
-                              onChange={(e) => setEditingCoupon({ 
-                                ...editingCoupon, 
-                                min_order_amount: e.target.value ? Number(e.target.value) : undefined 
-                              })}
+                              value={editingCoupon.min_order_amount}
+                              onChange={(e) => setEditingCoupon({ ...editingCoupon, min_order_amount: Number(e.target.value) })}
                             />
                           </div>
 
                           <div>
-                            <Label htmlFor="edit_max_uses">عدد مرات الاستخدام المسموح</Label>
+                            <Label htmlFor="edit_max_uses">الحد الأقصى للاستخدام</Label>
                             <Input
                               id="edit_max_uses"
                               type="number"
                               value={editingCoupon.max_uses || ''}
                               onChange={(e) => setEditingCoupon({ 
                                 ...editingCoupon, 
-                                max_uses: e.target.value ? Number(e.target.value) : undefined 
+                                max_uses: e.target.value ? Number(e.target.value) : null 
                               })}
                             />
                           </div>
@@ -372,12 +377,10 @@ const AdminCoupons = () => {
                             <Input
                               id="edit_expires_at"
                               type="datetime-local"
-                              value={editingCoupon.expires_at ? 
-                                new Date(editingCoupon.expires_at).toISOString().slice(0, 16) : ''
-                              }
+                              value={editingCoupon.expires_at ? editingCoupon.expires_at.slice(0, 16) : ''}
                               onChange={(e) => setEditingCoupon({ 
                                 ...editingCoupon, 
-                                expires_at: e.target.value || undefined 
+                                expires_at: e.target.value || null 
                               })}
                             />
                           </div>
@@ -386,10 +389,7 @@ const AdminCoupons = () => {
                             <Switch
                               id="edit_is_active"
                               checked={editingCoupon.is_active}
-                              onCheckedChange={(checked) => setEditingCoupon({ 
-                                ...editingCoupon, 
-                                is_active: checked 
-                              })}
+                              onCheckedChange={(checked) => setEditingCoupon({ ...editingCoupon, is_active: checked })}
                             />
                             <Label htmlFor="edit_is_active">نشط</Label>
                           </div>

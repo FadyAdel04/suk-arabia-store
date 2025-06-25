@@ -27,15 +27,17 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
         return;
       }
 
-      // First, ensure the bucket exists
+      // Check if bucket exists, create if it doesn't
       const { data: buckets } = await supabase.storage.listBuckets();
       const bucketExists = buckets?.some(bucket => bucket.id === 'product-images');
       
       if (!bucketExists) {
         const { error: bucketError } = await supabase.storage.createBucket('product-images', {
           public: true,
-          fileSizeLimit: 1024 * 1024 * 5 // 5MB
+          fileSizeLimit: 1024 * 1024 * 10, // 10MB
+          allowedMimeTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
         });
+        
         if (bucketError) {
           console.error('Error creating bucket:', bucketError);
           toast.error('خطأ في إنشاء مجلد الصور');
@@ -95,6 +97,15 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
       toast.error("يرجى إدخال رابط صورة صحيح");
       return;
     }
+    
+    // Basic URL validation
+    try {
+      new URL(val);
+    } catch {
+      toast.error("رابط الصورة غير صحيح");
+      return;
+    }
+
     const allUrls = [...imageUrls, val];
     setImageUrls(allUrls);
     onImageUploaded(allUrls);
@@ -111,11 +122,19 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
   return (
     <div className="space-y-4">
       <Label>صور المنتج</Label>
+      
       {/* Preview */}
       <div className="flex flex-wrap gap-2">
         {imageUrls.map((img, i) => (
           <div key={i} className="relative">
-            <img src={img} alt={`product-${i}`} className="w-24 h-24 object-cover rounded" />
+            <img 
+              src={img} 
+              alt={`product-${i}`} 
+              className="w-24 h-24 object-cover rounded border"
+              onError={(e) => {
+                e.currentTarget.src = '/placeholder.svg';
+              }}
+            />
             <Button
               variant="destructive"
               size="icon"
@@ -128,7 +147,8 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
           </div>
         ))}
       </div>
-      {/* Upload UI controls */}
+      
+      {/* Upload method selector */}
       <div className="flex space-x-2 space-x-reverse">
         <Button
           variant={uploadMethod === 'file' ? 'default' : 'outline'}
@@ -149,6 +169,7 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
           رابط صورة
         </Button>
       </div>
+      
       {/* File upload */}
       {uploadMethod === "file" && (
         <div>
@@ -158,10 +179,12 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
             multiple
             onChange={uploadFile}
             disabled={uploading}
+            className="cursor-pointer"
           />
           {uploading && <p className="text-sm text-blue-600 mt-2">جاري رفع الصور...</p>}
         </div>
       )}
+      
       {/* URL input */}
       {uploadMethod === "url" && (
         <div className="flex space-x-2 space-x-reverse">
@@ -170,7 +193,11 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
             onChange={(e) => setImageUrlInput(e.target.value)}
             placeholder="https://example.com/image.jpg"
           />
-          <Button type="button" onClick={handleUrlSubmit} disabled={!imageUrlInput.trim()}>
+          <Button 
+            type="button" 
+            onClick={handleUrlSubmit} 
+            disabled={!imageUrlInput.trim()}
+          >
             إضافة
           </Button>
         </div>

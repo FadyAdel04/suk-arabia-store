@@ -17,6 +17,8 @@ interface Order {
   notes: string;
   created_at: string;
   user_id: string;
+  coupon_code: string | null;
+  discount_amount: number;
   profiles: {
     full_name: string;
   } | null;
@@ -50,7 +52,9 @@ const AdminOrders = () => {
           phone,
           notes,
           created_at,
-          user_id
+          user_id,
+          coupon_code,
+          discount_amount
         `)
         .order('created_at', { ascending: false });
 
@@ -150,9 +154,16 @@ const AdminOrders = () => {
               <CardHeader>
                 <div className="flex justify-between items-center">
                   <CardTitle>طلب #{order.id.slice(0, 8)}</CardTitle>
-                  <Badge className={getStatusColor(order.status)}>
-                    {getStatusText(order.status)}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <Badge className={getStatusColor(order.status)}>
+                      {getStatusText(order.status)}
+                    </Badge>
+                    {order.coupon_code && (
+                      <Badge variant="secondary">
+                        كوبون: {order.coupon_code}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 <p className="text-sm text-gray-600">
                   العميل: {order.profiles?.full_name || 'غير محدد'} | التاريخ: {new Date(order.created_at).toLocaleDateString('ar-EG')}
@@ -200,11 +211,29 @@ const AdminOrders = () => {
                   </div>
                 </div>
 
-                <div className="border-t pt-4 flex justify-between items-center">
-                  <span className="font-bold">المجموع: {order.total_amount.toLocaleString()} جنيه</span>
-                  <span className="text-sm text-gray-600">
-                    {order.payment_method === 'cod' ? 'الدفع عند الاستلام' : 'دفع إلكتروني'}
-                  </span>
+                <div className="border-t pt-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>المجموع الفرعي:</span>
+                      <span>{(order.total_amount + (order.discount_amount || 0)).toLocaleString()} جنيه</span>
+                    </div>
+                    
+                    {order.coupon_code && order.discount_amount > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>خصم الكوبون ({order.coupon_code}):</span>
+                        <span>-{order.discount_amount.toLocaleString()} جنيه</span>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-center font-bold border-t pt-2">
+                      <span>المجموع النهائي:</span>
+                      <span>{order.total_amount.toLocaleString()} جنيه</span>
+                    </div>
+                    
+                    <div className="text-sm text-gray-600 text-left">
+                      {order.payment_method === 'cod' ? 'الدفع عند الاستلام' : 'دفع إلكتروني'}
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
