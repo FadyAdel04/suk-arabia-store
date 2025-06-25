@@ -27,12 +27,29 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
         return;
       }
 
+      // First, ensure the bucket exists
+      const { data: buckets } = await supabase.storage.listBuckets();
+      const bucketExists = buckets?.some(bucket => bucket.id === 'product-images');
+      
+      if (!bucketExists) {
+        const { error: bucketError } = await supabase.storage.createBucket('product-images', {
+          public: true,
+          fileSizeLimit: 1024 * 1024 * 5 // 5MB
+        });
+        if (bucketError) {
+          console.error('Error creating bucket:', bucketError);
+          toast.error('خطأ في إنشاء مجلد الصور');
+          setUploading(false);
+          return;
+        }
+      }
+
       let urls: string[] = [];
 
       for (const file of Array.from(event.target.files)) {
         const fileExt = file.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `${fileName}`;
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+        const filePath = `products/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
           .from('product-images')
@@ -40,6 +57,7 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
 
         if (uploadError) {
           console.error('Upload error:', uploadError);
+          toast.error(`خطأ في رفع الصورة: ${file.name}`);
           continue;
         }
 
@@ -52,10 +70,17 @@ const ImageUpload = ({ onImageUploaded, currentImage }: ImageUploadProps) => {
         }
       }
 
-      const allUrls = [...imageUrls, ...urls];
-      setImageUrls(allUrls);
-      onImageUploaded(allUrls);
-      toast.success("تم رفع الصور بنجاح");
+      if (urls.length > 0) {
+        const allUrls = [...imageUrls, ...urls];
+        setImageUrls(allUrls);
+        onImageUploaded(allUrls);
+        toast.success(`تم رفع ${urls.length} صورة بنجاح`);
+        
+        // Clear the file input
+        if (event.target) {
+          event.target.value = '';
+        }
+      }
     } catch (error) {
       console.error('Error uploading images:', error);
       toast.error("خطأ في رفع الصور");
