@@ -1,13 +1,18 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useCart } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, Star, Eye } from 'lucide-react';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { ShoppingCart, Star, Eye, ArrowLeft } from 'lucide-react';
+
+// Import Swiper React components and styles
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 
 interface Product {
   id: string;
@@ -23,6 +28,7 @@ const FeaturedProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
+  const swiperRef = useRef<any>(null);
 
   useEffect(() => {
     fetchFeaturedProducts();
@@ -163,11 +169,38 @@ const FeaturedProducts = () => {
             ))}
           </div>
         ) : (
-          <Carousel className="relative">
-            <CarouselContent>
+          <div className="relative">
+            <Swiper
+              ref={swiperRef}
+              modules={[Navigation, Pagination, Autoplay]}
+              spaceBetween={24}
+              slidesPerView={1}
+              breakpoints={{
+                640: {
+                  slidesPerView: 2,
+                },
+                1024: {
+                  slidesPerView: 4,
+                },
+              }}
+              navigation={{
+                prevEl: '.swiper-button-next',
+                nextEl: '.swiper-button-prev',
+              }}
+              pagination={{
+                clickable: true,
+                el: '.swiper-pagination',
+              }}
+              autoplay={{
+                delay: 5000,
+                disableOnInteraction: false,
+              }}
+              loop={true}
+              className="py-4"
+            >
               {products.map((product, index) => (
-                <CarouselItem key={product.id} className="basis-full md:basis-1/2 lg:basis-1/4">
-                  <Card className="group hover:shadow-xl transition-all duration-300 animate-fade-in hover-scale overflow-hidden">
+                <SwiperSlide key={product.id}>
+                  <Card className="group hover:shadow-xl transition-all duration-300 animate-fade-in hover-scale overflow-hidden h-full">
                     <div className="relative">
                       <Link to={`/product/${product.id}`}>
                         <img
@@ -240,12 +273,35 @@ const FeaturedProducts = () => {
                       </div>
                     </CardContent>
                   </Card>
-                </CarouselItem>
+                </SwiperSlide>
               ))}
-            </CarouselContent>
-            <CarouselPrevious />
-            <CarouselNext />
-          </Carousel>
+            </Swiper>
+
+            {/* Custom Navigation Buttons */}
+            <button className="swiper-button-prev absolute left-0 top-1/2 z-10 -translate-y-1/2 transform bg-gray-200 p-5 rounded shadow-md hover:bg-gray-100 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-2 w-2 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+            <button className="swiper-button-next absolute right-0 top-1/2 z-10 -translate-y-1/2 transform bg-gray-200 p-5 rounded shadow-md hover:bg-gray-100 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-2 w-2 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+
+            {/* Pagination */}
+            <div className="swiper-pagination mt-4 mb-14 flex justify-center space-x-2"></div>
+            
+            {/* View All Products Button */}
+            <div className="text-center mt-8">
+              <Link to="/shop">
+                <Button variant="outline" className="px-8 py-6 text-lg">
+                  <ArrowLeft className="h-5 w-5 ml-2" />
+                  عرض جميع المنتجات
+                </Button>
+              </Link>
+            </div>
+          </div>
         )}
       </div>
     </section>

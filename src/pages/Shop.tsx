@@ -1,13 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useCart } from '@/hooks/useCart';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Search, ShoppingCart, Star, Eye } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useCart } from "@/hooks/useCart";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Search, ShoppingCart, Star, Eye } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 
 interface Product {
   id: string;
@@ -32,24 +39,25 @@ const Shop = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
-  const [priceRange, setPriceRange] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [searchParams] = useSearchParams();
+  const [selectedCategory, setSelectedCategory] = useState(
+    searchParams.get("category") || "all"
+  );
+  const [sortBy, setSortBy] = useState("newest");
+  const [priceRange, setPriceRange] = useState("all");
   const { addToCart } = useCart();
 
   useEffect(() => {
     fetchCategories();
     fetchProducts();
-  }, [selectedCategory, sortBy, priceRange, searchTerm]);
+  }, [selectedCategory, sortBy, priceRange, searchTerm, searchParams]);
 
   const fetchCategories = async () => {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('*');
+    const { data, error } = await supabase.from("categories").select("*");
 
     if (error) {
-      console.error('Error fetching categories:', error);
+      console.error("Error fetching categories:", error);
     } else {
       setCategories(data || []);
     }
@@ -58,51 +66,53 @@ const Shop = () => {
   const fetchProducts = async () => {
     setLoading(true);
     let query = supabase
-      .from('products')
-      .select(`
+      .from("products")
+      .select(
+        `
         *,
         category:categories(name_ar)
-      `)
-      .eq('is_active', true);
+      `
+      )
+      .eq("is_active", true);
 
     // Apply filters
-    if (selectedCategory && selectedCategory !== 'all') {
-      query = query.eq('category_id', selectedCategory);
+    if (selectedCategory && selectedCategory !== "all") {
+      query = query.eq("category_id", selectedCategory);
     }
 
     if (searchTerm) {
-      query = query.ilike('name_ar', `%${searchTerm}%`);
+      query = query.ilike("name_ar", `%${searchTerm}%`);
     }
 
     // Apply price filter
-    if (priceRange !== 'all') {
-      const [min, max] = priceRange.split('-').map(Number);
+    if (priceRange !== "all") {
+      const [min, max] = priceRange.split("-").map(Number);
       if (max) {
-        query = query.gte('price', min).lte('price', max);
+        query = query.gte("price", min).lte("price", max);
       } else {
-        query = query.gte('price', min);
+        query = query.gte("price", min);
       }
     }
 
     // Apply sorting
     switch (sortBy) {
-      case 'price_low':
-        query = query.order('price', { ascending: true });
+      case "price_low":
+        query = query.order("price", { ascending: true });
         break;
-      case 'price_high':
-        query = query.order('price', { ascending: false });
+      case "price_high":
+        query = query.order("price", { ascending: false });
         break;
-      case 'name':
-        query = query.order('name_ar', { ascending: true });
+      case "name":
+        query = query.order("name_ar", { ascending: true });
         break;
       default:
-        query = query.order('created_at', { ascending: false });
+        query = query.order("created_at", { ascending: false });
     }
 
     const { data, error } = await query;
 
     if (error) {
-      console.error('Error fetching products:', error);
+      console.error("Error fetching products:", error);
     } else {
       setProducts(data || []);
     }
@@ -137,7 +147,10 @@ const Shop = () => {
             </div>
 
             {/* Category Filter */}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="جميع الفئات" />
               </SelectTrigger>
@@ -161,7 +174,9 @@ const Shop = () => {
                 <SelectItem value="0-1000">0 - 1,000 جنيه</SelectItem>
                 <SelectItem value="1000-5000">1,000 - 5,000 جنيه</SelectItem>
                 <SelectItem value="5000-10000">5,000 - 10,000 جنيه</SelectItem>
-                <SelectItem value="10000-25000">10,000 - 25,000 جنيه</SelectItem>
+                <SelectItem value="10000-25000">
+                  10,000 - 25,000 جنيه
+                </SelectItem>
                 <SelectItem value="25000">أكثر من 25,000 جنيه</SelectItem>
               </SelectContent>
             </Select>
@@ -173,8 +188,12 @@ const Shop = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="newest">الأحدث</SelectItem>
-                <SelectItem value="price_low">السعر: من الأقل للأعلى</SelectItem>
-                <SelectItem value="price_high">السعر: من الأعلى للأقل</SelectItem>
+                <SelectItem value="price_low">
+                  السعر: من الأقل للأعلى
+                </SelectItem>
+                <SelectItem value="price_high">
+                  السعر: من الأعلى للأقل
+                </SelectItem>
                 <SelectItem value="name">الاسم</SelectItem>
               </SelectContent>
             </Select>
@@ -183,10 +202,10 @@ const Shop = () => {
             <Button
               variant="outline"
               onClick={() => {
-                setSearchTerm('');
-                setSelectedCategory('all');
-                setSortBy('newest');
-                setPriceRange('all');
+                setSearchTerm("");
+                setSelectedCategory("all");
+                setSortBy("newest");
+                setPriceRange("all");
               }}
             >
               مسح الفلاتر
@@ -206,7 +225,10 @@ const Shop = () => {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {products.map((product) => (
-              <Card key={product.id} className="group hover:shadow-xl transition-all duration-300 overflow-hidden">
+              <Card
+                key={product.id}
+                className="group hover:shadow-xl transition-all duration-300 overflow-hidden"
+              >
                 <div className="relative">
                   <Link to={`/product/${product.id}`}>
                     <img
@@ -226,7 +248,13 @@ const Shop = () => {
                   )}
                   {product.original_price && (
                     <Badge className="absolute top-2 right-2 bg-red-500 text-white">
-                      خصم {Math.round(((product.original_price - product.price) / product.original_price) * 100)}%
+                      خصم{" "}
+                      {Math.round(
+                        ((product.original_price - product.price) /
+                          product.original_price) *
+                          100
+                      )}
+                      %
                     </Badge>
                   )}
                 </div>
@@ -237,13 +265,13 @@ const Shop = () => {
                       {product.category?.name_ar}
                     </span>
                   </div>
-                  
+
                   <Link to={`/product/${product.id}`}>
                     <h3 className="font-bold text-lg text-gray-900 mb-2 line-clamp-2 hover:text-blue-600 transition-colors cursor-pointer">
                       {product.name_ar}
                     </h3>
                   </Link>
-                  
+
                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">
                     {product.description_ar}
                   </p>
@@ -271,7 +299,7 @@ const Shop = () => {
                       disabled={product.stock_quantity === 0}
                     >
                       {product.stock_quantity === 0 ? (
-                        'نفدت الكمية'
+                        "نفدت الكمية"
                       ) : (
                         <>
                           <ShoppingCart className="h-4 w-4 ml-2" />
